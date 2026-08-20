@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -91,13 +92,20 @@ func waitForReady(t *testing.T, buf *syncBuffer) string {
 	return ""
 }
 
+// client disables keep-alives so no idle connection outlives its request and
+// delays the server's drain.
+var client = &http.Client{Transport: &http.Transport{DisableKeepAlives: true}}
+
 func get(t *testing.T, addr, path string) int {
 	t.Helper()
-	resp, err := http.Get(fmt.Sprintf("http://%s%s", addr, path))
+	resp, err := client.Get(fmt.Sprintf("http://%s%s", addr, path))
 	if err != nil {
 		t.Fatalf("GET %s: %v", path, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
+	if _, err := io.Copy(io.Discard, resp.Body); err != nil {
+		t.Fatalf("read %s body: %v", path, err)
+	}
 	return resp.StatusCode
 }
 
