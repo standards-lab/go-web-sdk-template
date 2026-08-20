@@ -17,9 +17,11 @@ jobs:
           go-version: "1.27"
 
       - name: go vet
+        working-directory: template
         run: go vet ./...
 
       - name: go test -race
+        working-directory: template
         run: go test -race ./...
 
   lint:
@@ -31,3 +33,4 @@ jobs:
         uses: golangci/golangci-lint-action@v9
         with:
           version: latest
+          working-directory: template

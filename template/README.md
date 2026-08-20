@@ -1,12 +1,12 @@
 # Service
 
-Seeded from [go-service-template](https://github.com/standards-lab/go-service-template).
+Generated from [go-web-sdk-template](https://github.com/standards-lab/go-web-sdk-template).
 
-## After seeding
+## After generation
 
 Three steps localize the service's identity:
 
-1. Rename `envPrefix` in `cmd/server/config.go` — the single constant every `APP_*`
+1. Rename `envPrefix` in `internal/config/config.go` — the single constant every `APP_*`
    environment-variable name derives from.
 2. Rename the `APP_ENV` key in `mise.toml`'s `[env]` block to follow the prefix.
 3. Rewrite this README for the service.
@@ -60,9 +60,27 @@ Configuration layers in a fixed precedence, later sources winning:
 Every file is optional — a deployment can run on the base file and environment variables alone,
 or on environment variables only.
 
-## Growing the service
+## Building out the service
 
-Domain routes mount on the mux in `cmd/server/routes.go`. Configuration grows by adding fields
-to `Config` in `cmd/server/config.go` and delegating to their `Merge`/`Finalize` in the existing
-shape. The service keeps pace with its infrastructure by updating its `go-libraries` version and
-applying whatever adjustments the release notes call for.
+The files in `cmd/server` map to the service's build points: `infrastructure.go` for the
+services it composes on, `routes.go` for its domain services, `middleware.go` for its
+router-level middleware.
+
+A domain service starts from its Entity. Give the Entity its own package, expose its Queries
+and Commands as the domain service's methods, bind those methods to routes in a `web.Module`,
+and mount the module in `setRoutes` (`cmd/server/routes.go`). The module's constructor takes
+its dependencies from the registry at the manifest, so its signature declares what the domain
+service uses.
+
+An infrastructure service (a database pool, a storage client, an auth client) is constructed
+and registered in `setInfrastructure` (`cmd/server/infrastructure.go`). One `Register` call
+carries the handle and the lifecycle declaration: startup, shutdown, and the readiness check.
+A service registered this way cannot be missing from the probe or the drain.
+
+Middleware that applies to every route stacks in `setMiddleware` (`cmd/server/middleware.go`),
+outermost first; middleware scoped to one domain service belongs on its module.
+
+Configuration grows by adding fields to `Config` in `internal/config/config.go` and delegating
+to their `Merge` and `Finalize` in the existing shape. The service keeps pace with its SDKs by
+updating its `go-core` and `go-web-sdk` pins and applying whatever adjustments the release
+notes call for.

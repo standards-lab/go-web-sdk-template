@@ -1,12 +1,15 @@
-// The server binary, one concern per file:
+// The server binary: the process entrypoint and the three manifests that
+// declare its composition, one concern per file.
 //
-//   - main.go    process entrypoint: signal context, config load, exit code
-//   - server.go  the server type and its phases — newServer is the cold
-//     start (construction and coordinator binding, zero I/O); serve is the
-//     hot start plus shutdown, delegated to lifecycle.Run
-//   - routes.go  router assembly, and the narrowing point where route groups
-//     receive their dependencies
+//   - main.go            entrypoint: signal context, config load, manifest
+//     evaluation, exit code
+//   - infrastructure.go  setInfrastructure, the infrastructure-service
+//     manifest: every service constructed and registered once, in
+//     dependency order
+//   - middleware.go      setMiddleware, the router-level middleware stack,
+//     outermost first
+//   - routes.go          setRoutes, the domain-service modules to mount
 //
-// Shutdown is ordered: a single composite hook drains the HTTP server before
-// the infrastructure beneath it closes.
+// The machinery the manifests feed lives in internal/app; extending the
+// service means adding an entry to a manifest, never touching the machinery.
 package main

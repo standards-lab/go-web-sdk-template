@@ -1,0 +1,17 @@
+# Marathon session plan files.
+.claude/plans/
+
+# Per-machine mise overrides.
+mise.local.toml
+
+# Secrets are layered configuration and never committed.
+secrets*.json
+
+# Build and coverage artifacts.
+bin/
+*.test
+coverage.out
+coverage.html
+
+# Local workspace files.
+tmp/
