@@ -32,10 +32,13 @@ are the `template/v*` tags; `@latest` follows the newest.
 [`template/README.md`](template/README.md) is the starter README every generated service
 receives. It documents running, configuring, and building out the service.
 
-## Target standard
+## Standard
 
-`go-web-sdk-template` is the web service template of `go-minimal`, the minimal-dependency Go
-standard. Its repository-level principles:
+`go-web-sdk-template` is the web service template of
+[Go Minimal](https://github.com/standards-lab/docs/blob/main/standards/go-minimal/index.md), the
+minimal-dependency Go standard, and its design is documented on the standard's
+[go-web-sdk-template page](https://github.com/standards-lab/docs/blob/main/standards/go-minimal/go-web-sdk-template/index.md).
+Its repository-level principles:
 
 - The template module depends on `go-core` and `go-web-sdk` at pinned releases, and nothing
   else. The template is engine-free: no data engine is declared and no provider is imported; a
@@ -44,9 +47,9 @@ standard. Its repository-level principles:
   identity, and the generated copy runs from the first build.
 - The template stays minimal and stable: it scaffolds the baseline architecture, and the SDKs
   carry the bulk of development change. A generated service keeps pace by updating its
-  `go-core` and `go-web-sdk` versions. Capability integrations stay out; their standardized
-  infrastructure lives in the capability repositories, and the organization's reference
-  architecture documents how they are integrated.
+  `go-core` and `go-web-sdk` versions. Service integrations stay out; the infrastructure
+  libraries define them, and the organization's reference architecture documents how they are
+  integrated.
 
 ## Repository layout
 
