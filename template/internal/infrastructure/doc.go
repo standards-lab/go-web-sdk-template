@@ -1,14 +1,17 @@
-// Package infrastructure assembles the service's shared subsystems — only
-// the logger in the template baseline — from the root configuration, and owns
-// their participation in the process lifecycle: construction ([New], the cold
-// start, no I/O), startup ([Infrastructure.Start], the hot half), ordered
-// teardown ([Infrastructure.Shutdown]), and the readiness checks the router
-// registers ([Infrastructure.Checks]). A new subsystem lands in all four
-// places in this one package, so it cannot be constructed yet missing from
-// startup, teardown, or the probe.
+// Package infrastructure is the type-keyed registry of the services an
+// application is composed on — the logger in the template baseline; a
+// database pool, storage, or auth client as a service grows. A service is
+// constructed and registered once, in the composition root's manifest, and
+// [Registry.Register] carries its handle and its lifecycle declaration in
+// the same call. The registry then drives startup in registration order and
+// shutdown in reverse ([Registry.Start], [Registry.Shutdown]), and feeds the
+// readiness probe ([Registry.Checks]).
 //
-// The instance is passed, never global, and it stops at the composition
-// layer: domain packages receive narrow primitives (*slog.Logger,
-// configuration values) extracted at the root, never this struct and never
-// the root config.
+// Retrieval is by type ([Registry.Get]) and stops at the composition layer:
+// the manifests and the application layer read the registry, and domain
+// packages receive their dependencies as constructor parameters, never the
+// registry itself. One instance per type is the contract; roles sharing a
+// type (a write pool and a read pool) are distinguished by defined wrapper
+// types, and a dynamic set of like services registers as one service that
+// owns its members.
 package infrastructure

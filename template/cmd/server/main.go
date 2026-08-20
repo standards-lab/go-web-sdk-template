@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/standards-lab/go-web-sdk-template/template/internal/app"
 	"github.com/standards-lab/go-web-sdk-template/template/internal/config"
 )
 
@@ -29,11 +30,16 @@ func run(stdout, stderr io.Writer) int {
 		return 1
 	}
 
-	srv, err := newServer(stdout, cfg)
+	infra, err := setInfrastructure(stdout, cfg)
 	if err != nil {
-		_, _ = fmt.Fprintln(stderr, "server init failed:", err)
+		_, _ = fmt.Fprintln(stderr, "infrastructure init failed:", err)
 		return 1
 	}
 
-	return srv.serve(ctx)
+	a := app.New(cfg, infra, app.Wiring{
+		Middleware: setMiddleware(infra),
+		Modules:    setRoutes(infra),
+	})
+
+	return a.Run(ctx)
 }
