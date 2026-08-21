@@ -22,7 +22,7 @@ The code and each package's `doc.go` are authoritative for what is built; the la
 documents the design.
 
 - **Runnable baseline** — built: the composition root in `internal/app` on the Elemental
-  Architecture layout — the `App` primitive with its route and middleware manifests, the
+  Architecture layout — the `App` structure with its build points, the
   `internal/infrastructure` struct of concrete fields constructed onto go-core's staged
   coordinator, the `internal/config` root, and the `cmd/server` entrypoint — with the probes,
   the staged drain, and the test suite.

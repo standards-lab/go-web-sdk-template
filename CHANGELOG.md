@@ -14,20 +14,21 @@ staged coordinator, and `cmd/server` shrinks to the entrypoint. The module depen
 
 ### Changed
 
-- **`internal/app`** is the composition root: `App` is the primitive orchestrating the root
-  composition, with the route and middleware manifests beside it (`routes.go`,
-  `middleware.go`). `New(cfg, w)` creates the coordinator, constructs the infrastructure,
-  assembles the router from the manifests, and declares the server as the coordinator's
-  root-stage service — started after every infrastructure stage and drained first, replacing
-  the composite shutdown hook — before snapshotting the readiness checks.
-- **`internal/infrastructure`** carries the application's services as the concrete fields of
-  `Infrastructure`, constructed by `New(w, cfg, lc)`, which registers each service that has a
-  lifecycle on the coordinator where it is constructed. A wiring mistake is a compile error at
-  the field access instead of a cold-start panic.
+- **`internal/app`** is the composition root: the `App` structure orchestrates the root
+  composition from the package's build points, route registration (`routes.go`) and the
+  middleware stack (`middleware.go`). `New(cfg, w)` creates the coordinator, constructs the
+  infrastructure, assembles the router from the registered routes and the middleware stack,
+  and declares the server as the coordinator's root-stage service — started after every
+  infrastructure stage and drained first, replacing the composite shutdown hook — before
+  snapshotting the readiness checks.
+- **`internal/infrastructure`** constructs the application's services into the concrete
+  fields of `Infrastructure`. `New(w, cfg, lc)` registers each service that has a lifecycle
+  on the coordinator where it is constructed. A wiring mistake is a compile error at the
+  field access instead of a cold-start panic.
 - **`cmd/server`** is the entrypoint alone: the signal context, the config load, `app.New`,
-  and the exit code. The infrastructure, middleware, and route manifests moved into
-  `internal`, so a growing service never edits the binary package — and the package-main test
-  exception leaves the template with them.
+  and the exit code. The infrastructure constructor, route registration, and the middleware
+  stack moved into `internal`, so a growing service never edits the binary package — and the
+  package-main test exception leaves the template with them.
 - The server starts only after the infrastructure stages complete; previously the two startup
   hooks ran concurrently.
 

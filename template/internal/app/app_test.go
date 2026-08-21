@@ -95,10 +95,10 @@ func get(t *testing.T, addr, path string) (int, string) {
 }
 
 // The baseline composition end to end: New assembles the process from the
-// package's own manifests, Run serves the probes, the readiness aggregate
-// carries the coordinator under the app's "lifecycle" name, the request
-// logger from the middleware manifest records the traffic, and a cancel
-// drains to exit 0.
+// package's build points, Run serves the probes, the readiness aggregate
+// reports the coordinator under the app's "lifecycle" name, the request
+// logger from the middleware stack records the traffic, and a cancel drains
+// to exit 0.
 func TestRun_ServesProbesThenDrains(t *testing.T) {
 	buf := &syncBuffer{}
 	a, err := app.New(testConfig(t), buf)
@@ -139,7 +139,7 @@ func TestRun_ServesProbesThenDrains(t *testing.T) {
 		t.Error("log carries no stop record after the drain")
 	}
 	if !strings.Contains(out, "path="+web.HealthPath) {
-		t.Error("log carries no probe request record; the middleware manifest is not wired")
+		t.Error("log has no probe request record; the middleware stack is not wired")
 	}
 }
 
