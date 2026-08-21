@@ -2,8 +2,7 @@ package app
 
 import (
 	"context"
-	"errors"
-	"log/slog"
+	"io"
 
 	"github.com/standards-lab/go-core/lifecycle"
 	"github.com/standards-lab/go-web-sdk"
@@ -11,83 +10,61 @@ import (
 	"github.com/standards-lab/go-web-sdk-template/template/internal/infrastructure"
 )
 
-// Wiring carries the manifests the composition root declares: the
-// router-level middleware stack, outermost first, and the domain-service
-// modules to mount.
-type Wiring struct {
-	Middleware []web.Middleware
-	Modules    []*web.Module
-}
-
 // App is the application layer: it owns the infrastructure registry and the
 // lifecycle coordinator, assembles the router, and runs the process.
 type App struct {
 	cfg    *config.Config
-	infra  *infrastructure.Registry
-	logger *slog.Logger
+	infra  *infrastructure.Infrastructure
 	lc     *lifecycle.Coordinator
 	server *web.Server
 }
 
-// New is the cold start: router assembly from the wiring, server
-// construction, and coordinator binding, with no I/O. The probes register on
-// the router's native mux, outside every module's middleware, from the
-// coordinator's check plus the registry's, and the logger is pulled from the
-// registry once, here. Wiring mistakes panic at construction.
-func New(cfg *config.Config, infra *infrastructure.Registry, wiring Wiring) *App {
-	logger := infra.Get[*slog.Logger]()
+func New(cfg *config.Config, w io.Writer) (*App, error) {
 	lc := lifecycle.New()
 
+	infra, err := infrastructure.New(w, cfg, lc)
+	if err != nil {
+		return nil, err
+	}
+
 	router := web.NewRouter()
-	router.Use(wiring.Middleware...)
-	for _, m := range wiring.Modules {
+	router.Use(middleware(infra)...)
+	for _, m := range routes(infra) {
 		router.Mount(m)
 	}
 
+	server := web.NewServer(cfg.Server, router)
+	lc.Add(lifecycle.Service{
+		Name:     "server",
+		Stage:    lifecycle.StageRoot,
+		Start:    server.Start,
+		Shutdown: server.Shutdown,
+	})
+	lc.Monitor(server.Err())
+
 	checks := append(
-		[]web.Check{{Name: "lifecycle", Checker: lc}},
-		infra.Checks()...,
+		[]lifecycle.Check{{Name: "lifecycle", Checker: lc}},
+		lc.Checks()...,
 	)
 	web.RegisterHealth(router, checks...)
 
-	a := &App{
+	lc.OnReady(func() {
+		infra.Logger.Info("server ready", "addr", server.Addr())
+	})
+
+	return &App{
 		cfg:    cfg,
 		infra:  infra,
-		logger: logger,
 		lc:     lc,
-		server: web.NewServer(cfg.Server, router),
-	}
-	a.bind()
-	return a
+		server: server,
+	}, nil
 }
 
-func (a *App) bind() {
-	a.lc.OnStartup(a.infra.Start)
-	a.lc.OnStartup(a.server.Start)
-
-	// One ordered hook: errors.Join evaluates left to right, so the server
-	// drains fully before the infrastructure beneath it shuts down.
-	a.lc.OnShutdown(func(ctx context.Context) error {
-		return errors.Join(
-			a.server.Shutdown(ctx),
-			a.infra.Shutdown(ctx),
-		)
-	})
-
-	a.lc.Monitor(a.server.Err())
-
-	a.lc.OnReady(func() {
-		a.logger.Info("server ready", "addr", a.server.Addr())
-	})
-}
-
-// Run is the hot start plus shutdown, delegated to the coordinator, and
-// returns the process exit code.
 func (a *App) Run(ctx context.Context) int {
 	if err := a.lc.Run(ctx, a.cfg.ShutdownTimeout.Duration()); err != nil {
-		a.logger.Error("service failed", "error", err)
+		a.infra.Logger.Error("service failed", "error", err)
 		return 1
 	}
-	a.logger.Info("server stopped")
+	a.infra.Logger.Info("server stopped")
 	return 0
 }

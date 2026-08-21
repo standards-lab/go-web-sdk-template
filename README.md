@@ -8,10 +8,10 @@ runnable web service on [go-core](https://github.com/standards-lab/go-core) and
   variables, in fixed precedence;
 - the cold/hot start lifecycle: constructed with no I/O, run under go-core's coordinator, and
   drained in order on shutdown;
-- liveness and readiness probes on `/healthz` and `/readyz`, fed by the registered
-  infrastructure services;
-- three build points in `cmd/server`: the infrastructure-service, route, and middleware
-  manifests.
+- liveness and readiness probes on `/healthz` and `/readyz`, fed by the lifecycle coordinator
+  and the services' named checks;
+- three build points in `internal`: the infrastructure constructor, route registration, and
+  the middleware stack.
 
 New services are generated from it:
 

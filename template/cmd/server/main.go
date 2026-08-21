@@ -30,16 +30,11 @@ func run(stdout, stderr io.Writer) int {
 		return 1
 	}
 
-	infra, err := setInfrastructure(stdout, cfg)
+	a, err := app.New(cfg, stdout)
 	if err != nil {
-		_, _ = fmt.Fprintln(stderr, "infrastructure init failed:", err)
+		_, _ = fmt.Fprintln(stderr, "app init failed:", err)
 		return 1
 	}
-
-	a := app.New(cfg, infra, app.Wiring{
-		Middleware: setMiddleware(infra),
-		Modules:    setRoutes(infra),
-	})
 
 	return a.Run(ctx)
 }
