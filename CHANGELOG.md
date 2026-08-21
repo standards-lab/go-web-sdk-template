@@ -5,6 +5,32 @@ documented here. The format follows [Keep a Changelog](https://keepachangelog.co
 and the module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). A
 generated service starts its own changelog; this one records the template's.
 
+## [v0.3.0] - 2026-08-21
+
+Two new composition-root layers, `internal/domain` and `internal/reactors`, sit between
+`internal/infrastructure` and `internal/app`; both ship empty, matching the empty `routes()`
+build point already in the baseline. The module depends on
+`github.com/standards-lab/go-web-sdk v0.3.0`.
+
+### Added
+
+- **`internal/domain`** composes the application's domain services over infrastructure. `New`
+  takes no lifecycle coordinator: domain services own no resource and never run, so there's
+  nothing to register.
+- **`internal/reactors`** composes the application's event-driven entry points — components
+  that watch a source of occurrences and dispatch each one to a domain service call, the
+  inbound counterpart to a route. `New` takes the coordinator and registers each one on it.
+
+### Changed
+
+- **`internal/app`**: construction order is infrastructure, then domain, then reactors, then
+  the router. `routes()` takes `*domain.Domain` in place of `*infrastructure.Infrastructure`;
+  `middleware()` keeps taking `*infrastructure.Infrastructure`, since the template's one
+  middleware, request logging, is a cross-cutting infrastructure concern, not domain logic.
+  `App` drops its `infra` field — nothing on `App` can reach a pool once it's gone — and gains
+  `logger`, populated from `infra.Logger` at construction. The `RegisterHealth` call passes the
+  coordinator directly, matching go-web-sdk v0.3.0's live-query signature.
+
 ## [v0.2.0] - 2026-08-21
 
 The composition root moves into the application layer and the type-keyed registry is deleted:

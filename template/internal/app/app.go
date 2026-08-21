@@ -3,18 +3,22 @@ package app
 import (
 	"context"
 	"io"
+	"log/slog"
 
 	"github.com/standards-lab/go-core/lifecycle"
 	"github.com/standards-lab/go-web-sdk"
 	"github.com/standards-lab/go-web-sdk-template/template/internal/config"
+	"github.com/standards-lab/go-web-sdk-template/template/internal/domain"
 	"github.com/standards-lab/go-web-sdk-template/template/internal/infrastructure"
+	"github.com/standards-lab/go-web-sdk-template/template/internal/reactors"
 )
 
-// App is the application layer: it owns the infrastructure registry and the
-// lifecycle coordinator, assembles the router, and runs the process.
+// App is the application layer: it assembles infrastructure, the domain, and
+// the reactors into a router and a lifecycle coordinator, and runs the
+// process.
 type App struct {
 	cfg    *config.Config
-	infra  *infrastructure.Infrastructure
+	logger *slog.Logger
 	lc     *lifecycle.Coordinator
 	server *web.Server
 }
@@ -27,9 +31,15 @@ func New(cfg *config.Config, w io.Writer) (*App, error) {
 		return nil, err
 	}
 
+	dom := domain.New(infra)
+
+	if _, err := reactors.New(infra, dom, lc); err != nil {
+		return nil, err
+	}
+
 	router := web.NewRouter()
 	router.Use(middleware(infra)...)
-	for _, m := range routes(infra) {
+	for _, m := range routes(dom) {
 		router.Mount(m)
 	}
 
@@ -42,11 +52,7 @@ func New(cfg *config.Config, w io.Writer) (*App, error) {
 	})
 	lc.Monitor(server.Err())
 
-	checks := append(
-		[]lifecycle.Check{{Name: "lifecycle", Checker: lc}},
-		lc.Checks()...,
-	)
-	web.RegisterHealth(router, checks...)
+	web.RegisterHealth(router, lc)
 
 	lc.OnReady(func() {
 		infra.Logger.Info("server ready", "addr", server.Addr())
@@ -54,7 +60,7 @@ func New(cfg *config.Config, w io.Writer) (*App, error) {
 
 	return &App{
 		cfg:    cfg,
-		infra:  infra,
+		logger: infra.Logger,
 		lc:     lc,
 		server: server,
 	}, nil
@@ -62,9 +68,9 @@ func New(cfg *config.Config, w io.Writer) (*App, error) {
 
 func (a *App) Run(ctx context.Context) int {
 	if err := a.lc.Run(ctx, a.cfg.ShutdownTimeout.Duration()); err != nil {
-		a.infra.Logger.Error("service failed", "error", err)
+		a.logger.Error("service failed", "error", err)
 		return 1
 	}
-	a.infra.Logger.Info("server stopped")
+	a.logger.Info("server stopped")
 	return 0
 }
