@@ -5,6 +5,39 @@ documented here. The format follows [Keep a Changelog](https://keepachangelog.co
 and the module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). A
 generated service starts its own changelog; this one records the template's.
 
+## [v0.2.0] - 2026-08-21
+
+The composition root moves into the application layer and the type-keyed registry is deleted:
+infrastructure is a struct of concrete fields, lifecycle declarations go directly to go-core's
+staged coordinator, and `cmd/server` shrinks to the entrypoint. The module depends on
+`github.com/standards-lab/go-core v0.2.0` and `github.com/standards-lab/go-web-sdk v0.2.0`.
+
+### Changed
+
+- **`internal/app`** is the composition root: `App` is the primitive orchestrating the root
+  composition, with the route and middleware manifests beside it (`routes.go`,
+  `middleware.go`). `New(cfg, w)` creates the coordinator, constructs the infrastructure,
+  assembles the router from the manifests, and declares the server as the coordinator's
+  root-stage service — started after every infrastructure stage and drained first, replacing
+  the composite shutdown hook — before snapshotting the readiness checks.
+- **`internal/infrastructure`** carries the application's services as the concrete fields of
+  `Infrastructure`, constructed by `New(w, cfg, lc)`, which registers each service that has a
+  lifecycle on the coordinator where it is constructed. A wiring mistake is a compile error at
+  the field access instead of a cold-start panic.
+- **`cmd/server`** is the entrypoint alone: the signal context, the config load, `app.New`,
+  and the exit code. The infrastructure, middleware, and route manifests moved into
+  `internal`, so a growing service never edits the binary package — and the package-main test
+  exception leaves the template with them.
+- The server starts only after the infrastructure stages complete; previously the two startup
+  hooks ran concurrently.
+
+### Removed
+
+- The type-keyed `infrastructure.Registry`: the `reflect` map, the parameterized `Register`
+  and `Get`, its `Service` type, and its ordered start and reverse shutdown, which now belong
+  to `lifecycle.Coordinator.Add`. Roles sharing a type are distinct fields; the wrapper-type
+  rule existed for the map key and goes with it.
+
 ## [v0.1.0] - 2026-08-20
 
 The first release of the web service template: the `template/` subtree module, carried from

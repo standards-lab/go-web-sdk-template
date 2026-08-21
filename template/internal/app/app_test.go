@@ -2,30 +2,25 @@ package app_test
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"context"
+
+	"github.com/standards-lab/go-core/logging"
 	"github.com/standards-lab/go-web-sdk"
 	"github.com/standards-lab/go-web-sdk-template/template/internal/app"
 	"github.com/standards-lab/go-web-sdk-template/template/internal/config"
-	"github.com/standards-lab/go-web-sdk-template/template/internal/infrastructure"
 )
 
 // failsafe bounds every wait for an event that should occur, so a broken
-// coordinator fails the test instead of hanging it.
+// composition fails the test instead of hanging it.
 const failsafe = 2 * time.Second
-
-// checker is a fixed-answer readiness check for registrations under test.
-type checker bool
-
-func (c checker) Ready() bool { return bool(c) }
 
 // syncBuffer serializes writes so the app's logging goroutines and the
 // test's reads stay race-free.
@@ -47,30 +42,18 @@ func (b *syncBuffer) String() string {
 }
 
 // testConfig builds a hermetic config: loopback host, an explicit zero port
-// for an ephemeral listener, and an empty prefix so environment overrides
-// stay disabled.
+// for an ephemeral listener, debug logging so probe requests leave records,
+// and an empty prefix so environment overrides stay disabled.
 func testConfig(t *testing.T) *config.Config {
 	t.Helper()
 	cfg := &config.Config{}
 	cfg.Server.Host = "127.0.0.1"
 	cfg.Server.Port = new(int)
+	cfg.Log.Level = logging.LevelDebug
 	if err := cfg.Finalize(""); err != nil {
 		t.Fatalf("finalize config: %v", err)
 	}
 	return cfg
-}
-
-// testRegistry builds a registry holding the logger every App requires,
-// writing to the returned buffer, plus any extra services.
-func testRegistry(t *testing.T, extra ...infrastructure.Service) (*infrastructure.Registry, *syncBuffer) {
-	t.Helper()
-	buf := &syncBuffer{}
-	r := infrastructure.NewRegistry()
-	r.Register(slog.New(slog.NewTextHandler(buf, nil)), infrastructure.Service{Name: "logger"})
-	for i, svc := range extra {
-		r.Register(i, svc)
-	}
-	return r, buf
 }
 
 // waitForReady polls the log for the coordinator's ready record and returns
@@ -96,44 +79,49 @@ func waitForReady(t *testing.T, buf *syncBuffer) string {
 // delays the server's drain.
 var client = &http.Client{Transport: &http.Transport{DisableKeepAlives: true}}
 
-func get(t *testing.T, addr, path string) int {
+// get returns the status code and body of a GET against the running app.
+func get(t *testing.T, addr, path string) (int, string) {
 	t.Helper()
 	resp, err := client.Get(fmt.Sprintf("http://%s%s", addr, path))
 	if err != nil {
 		t.Fatalf("GET %s: %v", path, err)
 	}
 	defer func() { _ = resp.Body.Close() }()
-	if _, err := io.Copy(io.Discard, resp.Body); err != nil {
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
 		t.Fatalf("read %s body: %v", path, err)
 	}
-	return resp.StatusCode
+	return resp.StatusCode, string(body)
 }
 
-func TestRun_ServesProbesAndMountedModulesThenDrains(t *testing.T) {
-	infra, buf := testRegistry(t, infrastructure.Service{Name: "extra", Check: checker(true)})
-
-	group := web.NewGroup("/t")
-	group.HandleFunc(http.MethodGet, "/ping", func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusNoContent)
-	})
-
-	a := app.New(testConfig(t), infra, app.Wiring{
-		Modules: []*web.Module{web.NewModule(group)},
-	})
+// The baseline composition end to end: New assembles the process from the
+// package's own manifests, Run serves the probes, the readiness aggregate
+// carries the coordinator under the app's "lifecycle" name, the request
+// logger from the middleware manifest records the traffic, and a cancel
+// drains to exit 0.
+func TestRun_ServesProbesThenDrains(t *testing.T) {
+	buf := &syncBuffer{}
+	a, err := app.New(testConfig(t), buf)
+	if err != nil {
+		t.Fatalf("app.New: %v", err)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan int, 1)
 	go func() { done <- a.Run(ctx) }()
 
 	addr := waitForReady(t, buf)
-	if code := get(t, addr, web.HealthPath); code != http.StatusOK {
+
+	if code, _ := get(t, addr, web.HealthPath); code != http.StatusOK {
 		t.Errorf("GET %s = %d, want 200", web.HealthPath, code)
 	}
-	if code := get(t, addr, web.ReadyPath); code != http.StatusOK {
+
+	code, body := get(t, addr, web.ReadyPath)
+	if code != http.StatusOK {
 		t.Errorf("GET %s = %d, want 200", web.ReadyPath, code)
 	}
-	if code := get(t, addr, "/t/ping"); code != http.StatusNoContent {
-		t.Errorf("GET /t/ping = %d, want 204", code)
+	if !strings.Contains(body, `"name":"lifecycle"`) {
+		t.Errorf("readiness body = %q, want the coordinator under the \"lifecycle\" name", body)
 	}
 
 	cancel()
@@ -145,42 +133,36 @@ func TestRun_ServesProbesAndMountedModulesThenDrains(t *testing.T) {
 	case <-time.After(failsafe):
 		t.Fatal("timed out waiting for Run to return")
 	}
-	if !strings.Contains(buf.String(), "server stopped") {
+
+	out := buf.String()
+	if !strings.Contains(out, "server stopped") {
 		t.Error("log carries no stop record after the drain")
 	}
+	if !strings.Contains(out, "path="+web.HealthPath) {
+		t.Error("log carries no probe request record; the middleware manifest is not wired")
+	}
 }
 
-// The registry's checks feed the probe: a service that reports unready keeps
-// /readyz at 503 even after the coordinator's startup completes.
-func TestRun_ReadyzReportsAnUnreadyService(t *testing.T) {
-	infra, buf := testRegistry(t, infrastructure.Service{Name: "warming", Check: checker(false)})
-
-	a := app.New(testConfig(t), infra, app.Wiring{})
+// A second Run cannot exist: the coordinator is single-use, and the exit
+// path reports rather than panics only for lifecycle errors — a re-run is a
+// programming error and propagates go-core's panic.
+func TestRun_TwicePanics(t *testing.T) {
+	buf := &syncBuffer{}
+	a, err := app.New(testConfig(t), buf)
+	if err != nil {
+		t.Fatalf("app.New: %v", err)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	done := make(chan int, 1)
-	go func() { done <- a.Run(ctx) }()
-
-	addr := waitForReady(t, buf)
-	if code := get(t, addr, web.ReadyPath); code != http.StatusServiceUnavailable {
-		t.Errorf("GET %s = %d with an unready service, want 503", web.ReadyPath, code)
-	}
-
 	cancel()
-	select {
-	case <-done:
-	case <-time.After(failsafe):
-		t.Fatal("timed out waiting for Run to return")
+	if code := a.Run(ctx); code != 0 {
+		t.Fatalf("first Run = %d, want 0", code)
 	}
-}
 
-// Every App requires the logger; assembling one from a registry without it
-// is a wiring mistake and panics at cold start.
-func TestNew_PanicsWithoutALogger(t *testing.T) {
 	defer func() {
 		if recover() == nil {
-			t.Error("New with no registered logger did not panic")
+			t.Error("a second Run did not panic")
 		}
 	}()
-	app.New(testConfig(t), infrastructure.NewRegistry(), app.Wiring{})
+	_ = a.Run(ctx)
 }

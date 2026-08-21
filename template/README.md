@@ -62,22 +62,30 @@ or on environment variables only.
 
 ## Building out the service
 
-The files in `cmd/server` map to the service's build points: `infrastructure.go` for the
-services it composes on, `routes.go` for its domain services, `middleware.go` for its
-router-level middleware.
+The build points live in `internal`: `infrastructure/infrastructure.go` for the services the
+application composes on, `app/routes.go` for its domain services, `app/middleware.go` for its
+router-level middleware. `cmd/server` is the entrypoint alone and never changes.
 
 A domain service starts from its Entity. Give the Entity its own package, expose its Queries
 and Commands as the domain service's methods, bind those methods to routes in a `web.Module`,
-and mount the module in `setRoutes` (`cmd/server/routes.go`). The module's constructor takes
-its dependencies from the registry at the manifest, so its signature declares what the domain
-service uses.
+and mount the module in `routes` (`internal/app/routes.go`), its constructor drawing what it
+uses from the `Infrastructure` fields.
 
-An infrastructure service (a database pool, a storage client, an auth client) is constructed
-and registered in `setInfrastructure` (`cmd/server/infrastructure.go`). One `Register` call
-carries the handle and the lifecycle declaration: startup, shutdown, and the readiness check.
-A service registered this way cannot be missing from the probe or the drain.
+An infrastructure service (a database pool, a storage client, an auth client) is a field on
+`Infrastructure` plus its construction in `New` (`internal/infrastructure/infrastructure.go`):
+assign the field, then declare the lifecycle on the coordinator —
 
-Middleware that applies to every route stacks in `setMiddleware` (`cmd/server/middleware.go`),
+```go
+i.Pool = pool
+lc.Add(lifecycle.Service{Name: "db", Stage: 0, Start: pool.Ping, Shutdown: pool.Close, Check: pool})
+```
+
+Numbered stages start in ascending order ahead of the server's root stage and drain after it,
+so in-flight requests complete before their infrastructure closes. A service declared this way
+cannot be missing from the probe or the drain, and a field that does not exist fails the build
+at its access.
+
+Middleware that applies to every route stacks in `middleware` (`internal/app/middleware.go`),
 outermost first; middleware scoped to one domain service belongs on its module.
 
 Configuration grows by adding fields to `Config` in `internal/config/config.go` and delegating
