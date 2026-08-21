@@ -21,16 +21,16 @@ and
 The code and each package's `doc.go` are authoritative for what is built; the landing zone
 documents the design.
 
-- **Runnable baseline** — built: the composition root in `internal/app` on the Elemental
-  Architecture layout — the `App` structure with its build points, the
-  `internal/infrastructure` struct of concrete fields constructed onto go-core's staged
-  coordinator, the `internal/config` root, and the `cmd/server` entrypoint — with the probes,
-  the staged drain, and the test suite.
+- **Runnable baseline** — built: the composition root on the Elemental Architecture layout, in
+  four layers — `internal/infrastructure`, `internal/domain`, `internal/reactors`, and
+  `internal/app` — each constructed in that order onto go-core's staged coordinator, plus the
+  `internal/config` root and the `cmd/server` entrypoint, with the probes, the staged drain, and
+  the test suite. `domain` and `reactors` ship empty; what they compose is the application
+  author's decision.
 - **Generation** — the constraints that keep the module cleanly copyable with `gonew`: the
   subtree boundary, everything surviving the path rewrite, the starter README's identity steps.
   Re-checked whenever a file is added.
 - **CI and release** — built: CI runs vet, race tests, and lint inside `template/`; releases are
   `template/v*` tags cut from the root `CHANGELOG.md`.
-- **Candidate direction** — the scaffolding CLI (`concepts/scaffolding-cli.md`) and
-  pre-staged packages for domain services (`concepts/domain-composition.md`); each waits on
-  the reference service, and the roadmap re-plan decides what is next.
+- **Candidate direction** — the scaffolding CLI (`concepts/scaffolding-cli.md`); it waits on the
+  reference service, and the roadmap re-plan decides what is next.
