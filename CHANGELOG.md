@@ -5,6 +5,30 @@ documented here. The format follows [Keep a Changelog](https://keepachangelog.co
 and the module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). A
 generated service starts its own changelog; this one records the template's.
 
+## [v0.4.0] - 2026-08-24
+
+The composition root now builds on go-core's `process` package, and the suite gains the
+configtest convention. A generated service starts with the pre-infrastructure main sequence
+imported rather than inlined, and with one package that knows the configuration's required
+fields.
+
+### Added
+
+- `internal/config/configtest` — hermetically valid configuration for the suites: `Config`
+  returns a finalized root config whose composition performs no I/O. When a subsystem's block
+  gains a required field, it is set here once and every consuming test adapts. The app test
+  builds its config through it.
+
+### Changed
+
+- `cmd/server` composes its run function on go-core's `process` package: `SignalContext`
+  supplies the signal-derived root context and `Fail` the pre-logger failure reporting,
+  replacing the inline signal wiring and bare exit literals.
+- The end-to-end app test is marked as bound to the baseline's inert infrastructure, naming
+  the startup-contract tests that replace it when the first subsystem with a lifecycle
+  arrives.
+- Pins move to go-core v0.3.0 and go-web-sdk v0.3.1.
+
 ## [v0.3.0] - 2026-08-21
 
 Two new composition-root layers, `internal/domain` and `internal/reactors`, sit between
