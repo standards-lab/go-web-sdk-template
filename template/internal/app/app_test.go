@@ -2,6 +2,7 @@ package app_test
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,12 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"context"
-
-	"github.com/standards-lab/go-core/logging"
 	"github.com/standards-lab/go-web-sdk"
 	"github.com/standards-lab/go-web-sdk-template/template/internal/app"
-	"github.com/standards-lab/go-web-sdk-template/template/internal/config"
+	"github.com/standards-lab/go-web-sdk-template/template/internal/config/configtest"
 )
 
 // failsafe bounds every wait for an event that should occur, so a broken
@@ -39,21 +37,6 @@ func (b *syncBuffer) String() string {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	return b.buf.String()
-}
-
-// testConfig builds a hermetic config: loopback host, an explicit zero port
-// for an ephemeral listener, debug logging so probe requests leave records,
-// and an empty prefix so environment overrides stay disabled.
-func testConfig(t *testing.T) *config.Config {
-	t.Helper()
-	cfg := &config.Config{}
-	cfg.Server.Host = "127.0.0.1"
-	cfg.Server.Port = new(int)
-	cfg.Log.Level = logging.LevelDebug
-	if err := cfg.Finalize(""); err != nil {
-		t.Fatalf("finalize config: %v", err)
-	}
-	return cfg
 }
 
 // waitForReady polls the log for the coordinator's ready record and returns
@@ -99,9 +82,16 @@ func get(t *testing.T, addr, path string) (int, string) {
 // reports the coordinator under the app's "lifecycle" name, the request
 // logger from the middleware stack records the traffic, and a cancel drains
 // to exit 0.
+//
+// The full serve-and-drain pass exists because the baseline's infrastructure
+// is inert: no subsystem opens a connection, so startup always succeeds.
+// When the first subsystem with a lifecycle arrives, this test gives way to
+// startup-contract tests — hermetic runs against a closed port asserting Run
+// exits 1, the startup failure names the subsystem, and the server never
+// reports ready.
 func TestRun_ServesProbesThenDrains(t *testing.T) {
 	buf := &syncBuffer{}
-	a, err := app.New(testConfig(t), buf)
+	a, err := app.New(configtest.Config(t), buf)
 	if err != nil {
 		t.Fatalf("app.New: %v", err)
 	}
@@ -148,7 +138,7 @@ func TestRun_ServesProbesThenDrains(t *testing.T) {
 // programming error and propagates go-core's panic.
 func TestRun_TwicePanics(t *testing.T) {
 	buf := &syncBuffer{}
-	a, err := app.New(testConfig(t), buf)
+	a, err := app.New(configtest.Config(t), buf)
 	if err != nil {
 		t.Fatalf("app.New: %v", err)
 	}

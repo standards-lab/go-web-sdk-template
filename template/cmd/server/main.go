@@ -1,12 +1,10 @@
 package main
 
 import (
-	"context"
-	"fmt"
 	"io"
 	"os"
-	"os/signal"
-	"syscall"
+
+	"github.com/standards-lab/go-core/process"
 
 	"github.com/standards-lab/go-web-sdk-template/template/internal/app"
 	"github.com/standards-lab/go-web-sdk-template/template/internal/config"
@@ -17,23 +15,17 @@ func main() {
 }
 
 func run(stdout, stderr io.Writer) int {
-	ctx, stop := signal.NotifyContext(
-		context.Background(),
-		os.Interrupt,
-		syscall.SIGTERM,
-	)
+	ctx, stop := process.SignalContext()
 	defer stop()
 
 	cfg, err := config.Load()
 	if err != nil {
-		_, _ = fmt.Fprintln(stderr, "config load failed:", err)
-		return 1
+		return process.Fail(stderr, "config load failed", err)
 	}
 
 	a, err := app.New(cfg, stdout)
 	if err != nil {
-		_, _ = fmt.Fprintln(stderr, "app init failed:", err)
-		return 1
+		return process.Fail(stderr, "app init failed", err)
 	}
 
 	return a.Run(ctx)
