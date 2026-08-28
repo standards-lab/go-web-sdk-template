@@ -5,6 +5,9 @@ on:
     tags:
       - "template/v*"
 
+concurrency:
+  group: release-${{ github.ref }}
+
 permissions:
   contents: write
 
