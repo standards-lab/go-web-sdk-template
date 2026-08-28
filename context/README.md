@@ -25,8 +25,9 @@ documents the design.
   four layers — `internal/infrastructure`, `internal/domain`, `internal/reactors`, and
   `internal/app` — each constructed in that order onto go-core's staged coordinator, plus the
   `internal/config` root and the `cmd/server` entrypoint, with the probes, the staged drain, and
-  the test suite. `domain` and `reactors` ship empty; what they compose is the application
-  author's decision.
+  the test suite. The route build point ships the one initialized empty `/api` module, with the
+  config root in scope so handlers take their policy at the construction site. `domain` and
+  `reactors` ship empty; what they compose is the application author's decision.
 - **Generation** — the constraints that keep the module cleanly copyable with `gonew`: the
   subtree boundary, everything surviving the path rewrite, the starter README's identity steps.
   Re-checked whenever a file is added.

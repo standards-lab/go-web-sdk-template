@@ -5,6 +5,25 @@ documented here. The format follows [Keep a Changelog](https://keepachangelog.co
 and the module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). A
 generated service starts its own changelog; this one records the template's.
 
+## [v0.5.0] - 2026-08-28
+
+The template composes on go-web-sdk v0.5.0 and models the API-module convention the reference
+service proved: one `/api` group, shipped initialized and empty, with the config root at the
+route build point so each handler is handed its policy at the construction site.
+
+### Changed
+
+- `internal/app`: `routes` widens to `routes(dom *domain.Domain, cfg *config.Config)` and its
+  body ships the initialized empty `/api` module — an application mounts its domain-service
+  route groups into the one group, each handler handed its policy from `cfg` where it is
+  constructed. The empty group serves no route; the baseline's behavior is unchanged.
+- `internal/domain`: the package doc states the layering — domain services are defined in the
+  module's base-layer domain packages and constructed here; the composition root registers and
+  composes only.
+- The go-web-sdk pin moves to v0.5.0. Nothing the template imports changed in that release;
+  the pin is the committed steady state for generated services, which start with `ParseQuery`
+  and `ErrorWriter` available.
+
 ## [v0.4.0] - 2026-08-24
 
 The composition root now builds on go-core's `process` package, and the suite gains the
