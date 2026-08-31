@@ -1,20 +1,20 @@
 # go-web-sdk-template
 
-The web service template of Go Minimal, the Standards Lab organization's minimal-dependency Go
-standard: scaffolds an initial Go Minimal web service application with `gonew`, built on
+The web service template of Go Elemental, the Standards Lab organization's Go implementation of
+the Elemental Architecture: scaffolds an initial Go Elemental web service application with `gonew`, built on
 go-core and go-web-sdk at pinned releases, and the first code expression of the Elemental
 Architecture's application layout.
 
 The design and conventions of this repository are documented in the organization's
 [documentation landing zone](https://github.com/standards-lab/docs); this context records only
 working knowledge the landing zone and the code do not express. The repository page is
-[go-web-sdk-template](https://github.com/standards-lab/docs/blob/main/standards/go-minimal/go-web-sdk-template/index.md),
-under the [Go Minimal](https://github.com/standards-lab/docs/blob/main/standards/go-minimal/index.md)
+[go-web-sdk-template](https://github.com/standards-lab/docs/blob/main/standards/go-elemental/go-web-sdk-template/index.md),
+under the [Go Elemental](https://github.com/standards-lab/docs/blob/main/standards/go-elemental/index.md)
 standard, with the design detailed in
-[The baseline](https://github.com/standards-lab/docs/blob/main/standards/go-minimal/go-web-sdk-template/baseline.md),
-[The elements in the template](https://github.com/standards-lab/docs/blob/main/standards/go-minimal/go-web-sdk-template/elements.md),
+[The baseline](https://github.com/standards-lab/docs/blob/main/standards/go-elemental/go-web-sdk-template/baseline.md),
+[The elements in the template](https://github.com/standards-lab/docs/blob/main/standards/go-elemental/go-web-sdk-template/elements.md),
 and
-[The template subtree](https://github.com/standards-lab/docs/blob/main/standards/go-minimal/go-web-sdk-template/template-subtree.md).
+[The template subtree](https://github.com/standards-lab/docs/blob/main/standards/go-elemental/go-web-sdk-template/template-subtree.md).
 
 ## Capability map
 

@@ -1,6 +1,6 @@
 # go-web-sdk-template
 
-The web service template of the `go-minimal` standard. A generated service starts as a minimal
+The web service template of the `go-elemental` standard. A generated service starts as a minimal
 runnable web service on [go-core](https://github.com/standards-lab/go-core) and
 [go-web-sdk](https://github.com/standards-lab/go-web-sdk), carrying:
 
@@ -35,9 +35,9 @@ receives. It documents running, configuring, and building out the service.
 ## Standard
 
 `go-web-sdk-template` is the web service template of
-[Go Minimal](https://github.com/standards-lab/docs/blob/main/standards/go-minimal/index.md), the
+[Go Elemental](https://github.com/standards-lab/docs/blob/main/standards/go-elemental/index.md), the
 minimal-dependency Go standard, and its design is documented on the standard's
-[go-web-sdk-template page](https://github.com/standards-lab/docs/blob/main/standards/go-minimal/go-web-sdk-template/index.md).
+[go-web-sdk-template page](https://github.com/standards-lab/docs/blob/main/standards/go-elemental/go-web-sdk-template/index.md).
 Its repository-level principles:
 
 - The template module depends on `go-core` and `go-web-sdk` at pinned releases, and nothing

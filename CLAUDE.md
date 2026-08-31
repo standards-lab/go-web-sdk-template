@@ -1,7 +1,7 @@
 # go-web-sdk-template
 
-The web service template of Go Minimal, the Standards Lab organization's minimal-dependency Go
-standard: scaffolds an initial Go Minimal web service application with `gonew`, built on
+The web service template of Go Elemental, the Standards Lab organization's Go implementation of
+the Elemental Architecture: scaffolds an initial Go Elemental web service application with `gonew`, built on
 go-core and go-web-sdk. Managed with the marathon workflow; start from `context/README.md`.
 
 ## Design is documented in the landing zone
