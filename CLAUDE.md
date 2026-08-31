@@ -25,6 +25,9 @@ zone page in the same effort.
 - **Releases.** The module is tagged `template/v<semver>` from the root `CHANGELOG.md`, cut by
   `.github/workflows/release.yml`.
 - **Tasks.** `template/mise.toml` defines the tasks; development runs inside `template/`. The
-  subtree's `.gitignore` and CI workflow are separate copies of the root ones (the dual-copy
-  rule: a change to either copy lands in the other in the same commit).
+  subtree's CI workflow is a copy of the root one minus the `working-directory` lines (the
+  dual-copy rule: a change to either copy lands in the other in the same commit). The two
+  `.gitignore` files differ deliberately: the root adds the management layer's entries
+  (`.claude/plans/`, `mise.local.toml`, `go.work`); the subtree carries only what a generated
+  service needs.
 - **Public repo.** This repository is public on GitHub.

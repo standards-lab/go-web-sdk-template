@@ -76,8 +76,8 @@ An infrastructure service (a database pool, a storage client, an auth client) is
 assign the field, then declare the lifecycle on the coordinator —
 
 ```go
-i.Pool = pool
-lc.Add(lifecycle.Service{Name: "db", Stage: 0, Start: pool.Ping, Shutdown: pool.Close, Check: pool})
+i.DB = db
+lc.Add(lifecycle.Service{Name: "database", Stage: 0, Start: db.Start, Shutdown: db.Shutdown, Check: db})
 ```
 
 Numbered stages start in ascending order ahead of the server's root stage and drain after it,
