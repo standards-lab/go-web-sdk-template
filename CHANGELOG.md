@@ -5,6 +5,8 @@ documented here. The format follows [Keep a Changelog](https://keepachangelog.co
 and the module adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). A
 generated service starts its own changelog; this one records the template's.
 
+## [Unreleased]
+
 ## [v0.5.0] - 2026-08-28
 
 The template composes on go-web-sdk v0.5.0 and models the API-module convention the reference
@@ -144,3 +146,10 @@ depends on `github.com/standards-lab/go-core v0.1.0` and
 - **Generation** — `gonew github.com/standards-lab/go-web-sdk-template/template@latest`
   copies the subtree as a running service; the starter README carries the after-generation
   identity steps.
+
+[Unreleased]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.5.0...HEAD
+[v0.5.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.4.0...template/v0.5.0
+[v0.4.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.3.0...template/v0.4.0
+[v0.3.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.2.0...template/v0.3.0
+[v0.2.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.1.0...template/v0.2.0
+[v0.1.0]: https://github.com/standards-lab/go-web-sdk-template/releases/tag/template/v0.1.0

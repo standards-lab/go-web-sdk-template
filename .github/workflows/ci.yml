@@ -20,6 +20,16 @@ jobs:
         working-directory: template
         run: go vet ./...
 
+      - name: gofmt
+        working-directory: template
+        run: |
+          unformatted=$(gofmt -l .)
+          [ -z "$unformatted" ] || { echo "$unformatted"; exit 1; }
+
+      - name: go mod tidy -diff
+        working-directory: template
+        run: go mod tidy -diff
+
       - name: go test -race
         working-directory: template
         run: go test -race ./...
@@ -32,5 +42,5 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
-          version: latest
+          version: v2.13.2
           working-directory: template
