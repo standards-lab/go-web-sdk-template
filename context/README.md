@@ -33,5 +33,9 @@ documents the design.
   Re-checked whenever a file is added.
 - **CI and release** — built: CI runs vet, race tests, and lint inside `template/`; releases are
   `template/v*` tags cut from the root `CHANGELOG.md`.
-- **Candidate direction** — the scaffolding CLI (`concepts/scaffolding-cli.md`); it waits on the
-  reference service, and the roadmap re-plan decides what is next.
+- **Next** — `v1.data.sql.integration.template`: the composition root as one file per layer
+  under `internal/app`, `internal/data` with its directories and a seeder skeleton,
+  `admin/database` over go-database's admin package, `sqlint.toml`, and the mise tasks, per
+  the prototype's review (`standards-lab/experiments/sql-dsl/REVIEW.md` §3.4).
+- **Candidate direction** — the scaffolding CLI (`concepts/scaffolding-cli.md`); it waits on
+  the reference service.
