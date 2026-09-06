@@ -3,15 +3,14 @@ package app
 import (
 	"github.com/standards-lab/go-web-sdk"
 	"github.com/standards-lab/go-web-sdk-template/template/internal/config"
-	"github.com/standards-lab/go-web-sdk-template/template/internal/domain"
 )
 
-// routes composes the API module: the one /api group, which an application
-// built from the template mounts its domain-service route groups into, each
-// constructor drawing its dependencies from dom and each handler handed its
-// policy from cfg at the construction site. The template ships the group
-// initialized and empty.
-func routes(dom *domain.Domain, cfg *config.Config) []*web.Module {
-	api := web.NewGroup("/api")
-	return []*web.Module{web.NewModule(api)}
+// routes is the list of mounts: the modules the router serves, each built
+// by the layer file that owns it. The API mount comes from domain.go, the
+// admin mount from admin.go; this file composes and does nothing else.
+func routes(dom *Domain, adm *Admin, cfg *config.Config) []*web.Module {
+	return []*web.Module{
+		web.NewModule(mountAPI(dom, cfg)),
+		web.NewModule(mountAdmin(adm)),
+	}
 }
