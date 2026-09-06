@@ -7,6 +7,43 @@ generated service starts its own changelog; this one records the template's.
 
 ## [Unreleased]
 
+## [v0.6.0] - 2026-09-06
+
+The composition root is laid out as one file per layer of the architecture, and the template
+gains the administrative layer as shape and the service-owned read policy block. The module
+depends on `github.com/standards-lab/go-web-sdk v0.6.0`.
+
+### Added
+
+- `internal/app/admin.go` — the administrative layer: the empty `Admin` composition, `newAdmin`
+  taking the config root and the coordinator so the first admin service registers its
+  lifecycle stage and takes its switches without a signature change, and `mountAdmin`
+  building the empty `/admin` group. The mount serves on the API listener; its isolation is
+  the application's decision before the first admin service is mounted, and the starter
+  README says so.
+- `internal/config`: the `reads` block, `ReadsConfig`, the single source of the page-size
+  policy each handler constructor receives as `web.Limits` at the route build point —
+  `default_size` 20 and `max_size` 100, overridable as `APP_READS_DEFAULT_SIZE` and
+  `APP_READS_MAX_SIZE`, validated to the invariant `web.ParseQuery` panics on. `config.json`
+  carries the defaults.
+
+### Changed
+
+- `internal/app` is the whole composition root: `infrastructure.go`, `admin.go`, `domain.go`,
+  and `reactors.go` each construct their layer and own their mount, `routes.go` is the list of
+  mounts, and `middleware.go` the router-level stack. `New` constructs infrastructure, the
+  admin layer, the domain, and the reactors in that order. The package's file list is the
+  architecture's layer list.
+- The go-web-sdk pin moves to v0.6.0. Nothing the template calls changed in that release; a
+  generated service starts with the error-returning handler adapter, `DecodeJSON`, `IfMatch`,
+  and the bracket operator grammar in `ParseQuery` available.
+
+### Removed
+
+- The `internal/infrastructure`, `internal/domain`, and `internal/reactors` packages. Each had
+  one consumer, and the reactors constructor taking the domain type forced them into one
+  package; their doc comments moved onto the layer files' types and constructors.
+
 ## [v0.5.0] - 2026-08-28
 
 The template composes on go-web-sdk v0.5.0 and models the API-module convention the reference
@@ -147,7 +184,8 @@ depends on `github.com/standards-lab/go-core v0.1.0` and
   copies the subtree as a running service; the starter README carries the after-generation
   identity steps.
 
-[Unreleased]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.5.0...HEAD
+[Unreleased]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.6.0...HEAD
+[v0.6.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.5.0...template/v0.6.0
 [v0.5.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.4.0...template/v0.5.0
 [v0.4.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.3.0...template/v0.4.0
 [v0.3.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.2.0...template/v0.3.0
