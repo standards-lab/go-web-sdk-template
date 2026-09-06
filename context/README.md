@@ -39,8 +39,8 @@ documents the design.
   `template/v*` tags cut from the root `CHANGELOG.md`.
 - **Candidate direction** — the admin layer's content and the database infrastructure patterns
   (the data package, the admin route group, the conventions lint, the compose stack and its
-  tasks) are reference-architecture patterns: go-web-service proves them at
-  `v1.data.sql.integration.service` and the docs pass documents them. The template stays
-  engine-free and standardizes only what the reference service has proven stable.
+  tasks) are reference-architecture patterns: go-web-service proved them at
+  `v1.data.sql.integration.service` (2026-09-06) and the docs pass documents them. The template
+  stays engine-free and standardizes only what the reference service has proven stable.
 - **Candidate direction** — the scaffolding CLI (`concepts/scaffolding-cli.md`); it waits on
   the reference service.
