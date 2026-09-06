@@ -21,21 +21,26 @@ and
 The code and each package's `doc.go` are authoritative for what is built; the landing zone
 documents the design.
 
-- **Runnable baseline** — built: the composition root on the Elemental Architecture layout, in
-  four layers — `internal/infrastructure`, `internal/domain`, `internal/reactors`, and
-  `internal/app` — each constructed in that order onto go-core's staged coordinator, plus the
-  `internal/config` root and the `cmd/server` entrypoint, with the probes, the staged drain, and
-  the test suite. The route build point ships the one initialized empty `/api` module, with the
-  config root in scope so handlers take their policy at the construction site. `domain` and
-  `reactors` ship empty; what they compose is the application author's decision.
+- **Runnable baseline** — built (template/v0.6.0): the composition root `internal/app` on the
+  Elemental Architecture layout, one file per layer — `infrastructure.go`, `admin.go`,
+  `domain.go`, and `reactors.go`, each constructing its layer in that order onto go-core's
+  staged coordinator and owning its mount, with `routes.go` the list of mounts and
+  `middleware.go` the router-level stack — plus the `internal/config` root and the `cmd/server`
+  entrypoint, with the probes, the staged drain, and the test suite. The `/api` and `/admin`
+  groups ship initialized and empty, with the config root in scope so handlers take their
+  policy at the construction site; the `reads` block is that policy's single source. The admin,
+  domain, and reactor layers ship empty; what they compose is the application author's
+  decision. The `/admin` group serves on the API listener until the application settles its
+  isolation, before the first admin service is mounted.
 - **Generation** — the constraints that keep the module cleanly copyable with `gonew`: the
   subtree boundary, everything surviving the path rewrite, the starter README's identity steps.
   Re-checked whenever a file is added.
 - **CI and release** — built: CI runs vet, race tests, and lint inside `template/`; releases are
   `template/v*` tags cut from the root `CHANGELOG.md`.
-- **Next** — `v1.data.sql.integration.template`: the composition root as one file per layer
-  under `internal/app`, `internal/data` with its directories and a seeder skeleton,
-  `admin/database` over go-database's admin package, `sqlint.toml`, and the mise tasks, per
-  the prototype's review (`standards-lab/experiments/sql-dsl/REVIEW.md` §3.4).
+- **Candidate direction** — the admin layer's content and the database infrastructure patterns
+  (the data package, the admin route group, the conventions lint, the compose stack and its
+  tasks) are reference-architecture patterns: go-web-service proves them at
+  `v1.data.sql.integration.service` and the docs pass documents them. The template stays
+  engine-free and standardizes only what the reference service has proven stable.
 - **Candidate direction** — the scaffolding CLI (`concepts/scaffolding-cli.md`); it waits on
   the reference service.

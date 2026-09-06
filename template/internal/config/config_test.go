@@ -7,6 +7,7 @@ import (
 
 	libconfig "github.com/standards-lab/go-core/config"
 	"github.com/standards-lab/go-core/logging"
+	"github.com/standards-lab/go-web-sdk"
 	"github.com/standards-lab/go-web-sdk-template/template/internal/config"
 )
 
@@ -112,5 +113,84 @@ func TestConfig_FinalizeWrapsChildErrors(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "log:") {
 		t.Errorf("error = %v, want the log block wrap", err)
+	}
+}
+
+func TestReads_FinalizeDefaults(t *testing.T) {
+	cfg := &config.Config{}
+	if err := cfg.Finalize(""); err != nil {
+		t.Fatalf("Finalize: %v", err)
+	}
+
+	// Pins the documented paging defaults.
+	if got := cfg.Reads.Limits(); got != (web.Limits{DefaultSize: 20, MaxSize: 100}) {
+		t.Errorf("Reads.Limits() = %+v, want {20 100}", got)
+	}
+	if cfg.Reads.Env != (config.ReadsEnv{}) {
+		t.Errorf("Reads.Env = %+v, want empty under the empty prefix", cfg.Reads.Env)
+	}
+}
+
+func TestReads_MergeOverlaysSetFields(t *testing.T) {
+	base := &config.Config{}
+	base.Reads.DefaultSize = new(10)
+	base.Reads.MaxSize = new(50)
+
+	overlay := &config.Config{}
+	overlay.Reads.MaxSize = new(200)
+
+	base.Merge(overlay)
+
+	if got := *base.Reads.MaxSize; got != 200 {
+		t.Errorf("Reads.MaxSize = %d, want 200", got)
+	}
+	// A field the overlay leaves unset keeps the base value.
+	if got := *base.Reads.DefaultSize; got != 10 {
+		t.Errorf("Reads.DefaultSize = %d, want 10", got)
+	}
+}
+
+func TestReads_FinalizeEnvOverrides(t *testing.T) {
+	t.Setenv("APP_READS_DEFAULT_SIZE", "25")
+	t.Setenv("APP_READS_MAX_SIZE", "250")
+
+	cfg := &config.Config{}
+	if err := cfg.Finalize("app"); err != nil {
+		t.Fatalf("Finalize: %v", err)
+	}
+
+	if got := cfg.Reads.Limits(); got != (web.Limits{DefaultSize: 25, MaxSize: 250}) {
+		t.Errorf("Reads.Limits() = %+v, want {25 250}", got)
+	}
+	want := config.ReadsEnv{DefaultSize: "APP_READS_DEFAULT_SIZE", MaxSize: "APP_READS_MAX_SIZE"}
+	if cfg.Reads.Env != want {
+		t.Errorf("Reads.Env = %+v, want %+v", cfg.Reads.Env, want)
+	}
+}
+
+func TestReads_FinalizeRejectsInvalidPolicy(t *testing.T) {
+	cases := map[string]struct {
+		defaultSize, maxSize string
+		want                 string
+	}{
+		"default below one":    {"0", "100", "default_size"},
+		"max below default":    {"20", "10", "max_size"},
+		"default not a number": {"twenty", "100", "APP_READS_DEFAULT_SIZE"},
+		"max not a number":     {"20", "many", "APP_READS_MAX_SIZE"},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv("APP_READS_DEFAULT_SIZE", tc.defaultSize)
+			t.Setenv("APP_READS_MAX_SIZE", tc.maxSize)
+
+			cfg := &config.Config{}
+			err := cfg.Finalize("app")
+			if err == nil {
+				t.Fatal("Finalize accepted an invalid reads policy")
+			}
+			if !strings.Contains(err.Error(), "reads:") || !strings.Contains(err.Error(), tc.want) {
+				t.Errorf("error = %v, want the reads block wrap naming %s", err, tc.want)
+			}
+		})
 	}
 }
