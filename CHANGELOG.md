@@ -30,6 +30,11 @@ what it exercises. The module depends on `github.com/standards-lab/go-core v0.4.
 
 - The module builds on go-core v0.4.0 and go-web-sdk v0.7.0 (from v0.3.0 and v0.6.0).
 
+### Fixed
+
+- The root CI workflow points the Go module cache at `template/go.sum`; setup-go looked for
+  the module at the repository root, found none, and ran every job without a cache.
+
 ## [v0.6.0] - 2026-09-06
 
 The composition root is laid out as one file per layer of the architecture, and the template
