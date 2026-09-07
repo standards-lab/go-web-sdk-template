@@ -21,7 +21,7 @@ and
 The code and each package's `doc.go` are authoritative for what is built; the landing zone
 documents the design.
 
-- **Runnable baseline** — built (template/v0.6.0): the composition root `internal/app` on the
+- **Runnable baseline** — built (template/v0.7.0): the composition root `internal/app` on the
   Elemental Architecture layout, one file per layer — `infrastructure.go`, `admin.go`,
   `domain.go`, and `reactors.go`, each constructing its layer in that order onto go-core's
   staged coordinator and owning its mount, with `routes.go` the list of mounts and
@@ -35,8 +35,15 @@ documents the design.
 - **Generation** — the constraints that keep the module cleanly copyable with `gonew`: the
   subtree boundary, everything surviving the path rewrite, the starter README's identity steps.
   Re-checked whenever a file is added.
-- **CI and release** — built: CI runs vet, race tests, and lint inside `template/`; releases are
-  `template/v*` tags cut from the root `CHANGELOG.md`.
+- **Integration tier** — built (template/v0.7.0, `v1.data.sql.tasks.toolkit`): the
+  `integration` package, an untagged harness over go-core's `process/processtest` and
+  go-web-sdk's `webtest` and the tagged suite asserting the baseline's boot, probes, and drain;
+  `mise run integration` and the CI job on merge to main. Engine-free: the isolated compose
+  project is the reference service's pattern, adopted with a first backing service. The landing
+  zone page is due in the docs pass.
+- **CI and release** — built: CI runs vet, race tests, and lint inside `template/` on every pull
+  request and the integration tier on merge to main; releases are `template/v*` tags cut from
+  the root `CHANGELOG.md`.
 - **Candidate direction** — the admin layer's content and the database infrastructure patterns
   (the data package, the admin route group, the conventions lint, the compose stack and its
   tasks) are reference-architecture patterns: go-web-service proved them at
