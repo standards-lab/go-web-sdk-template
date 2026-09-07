@@ -69,8 +69,8 @@ mise trust && mise install
 mise run test
 ```
 
-`template/mise.toml` carries the tasks (`vet`, `serve`, `test`, `fmt`, `tidy`, `lint`), each
-wrapping a plain command.
+`template/mise.toml` carries the tasks, each wrapping a plain command; `template/README.md`
+lists them.
 
 ## License
 
