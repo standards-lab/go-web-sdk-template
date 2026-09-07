@@ -38,12 +38,29 @@ Each task wraps a plain command, so the repository works without mise:
 
 | Task | Command | What it does |
 |------|---------|--------------|
-| `mise run vet` | `go vet ./...` | Compile-check and vet |
+| `mise run vet` | `go vet -tags integration ./...` | Compile-check and vet, the integration suite included |
 | `mise run serve` | `go run ./cmd/server` | Run the service locally |
-| `mise run test` | `go test -race ./...` | Run the tests |
+| `mise run test` | `go test -race ./...` | Run the unit tier |
+| `mise run integration` | `go test -race -count=1 -tags integration ./integration/` | Run the integration tier against the built service |
 | `mise run fmt` | `gofmt -w .` | Format the source |
 | `mise run tidy` | `go mod tidy` | Reconcile module requirements |
-| `mise run lint` | `golangci-lint run ./...` | Lint |
+| `mise run lint` | `golangci-lint run --build-tags integration ./...` | Lint, the integration suite included |
+
+## Testing
+
+Two tiers. The unit tier is hermetic and runs on every pull request: `go test -race ./...`,
+touching no service, network, or disk. The integration tier is the `integration` package: an
+untagged harness that builds `cmd/server` once, runs it as a subprocess configured by `APP_*`
+variables on a port it reserved, and drives it through its HTTP surface, over the toolkit the
+SDKs ship for the purpose (go-core's `process/processtest`, go-web-sdk's `webtest`); and, under
+the `integration` build tag, the suite that asserts the service's behavior through its API. It
+runs on merge to main and on demand, below the per-PR rate by design.
+
+The template's suite asserts the baseline: boot, both probes, and the drain. As the build points
+fill in, each capability adds its cases beside them, and the first backing service brings its
+compose stack: the task then boots that stack as an isolated compose project on its own port,
+runs the suite, and tears it down with its volume on exit, so a developer's stack and data are
+never touched. The reference service shows the shape.
 
 ## Configuration
 

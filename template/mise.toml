@@ -10,16 +10,23 @@ description = "Build the module"
 run = "go build ./..."
 
 [tasks.vet]
-description = "Run go vet"
-run = "go vet ./..."
+description = "Run go vet, the integration suite included"
+run = "go vet -tags integration ./..."
 
 [tasks.serve]
 description = "Run the service locally"
 run = "go run ./cmd/server"
 
 [tasks.test]
-description = "Run tests"
+description = "Run the unit tier"
 run = "go test -race ./..."
+
+# The integration tier runs the built service as a subprocess. A service with a
+# backing service wraps this in its compose stack as an isolated project, the way
+# the reference service does; the template is engine-free and needs none.
+[tasks.integration]
+description = "Run the integration tier against the built service"
+run = "go test -race -count=1 -tags integration ./integration/"
 
 [tasks.fmt]
 description = "Format all Go source"
@@ -30,5 +37,5 @@ description = "Run go mod tidy"
 run = "go mod tidy"
 
 [tasks.lint]
-description = "Run golangci-lint"
-run = "golangci-lint run ./..."
+description = "Run golangci-lint, the integration suite included"
+run = "golangci-lint run --build-tags integration ./..."

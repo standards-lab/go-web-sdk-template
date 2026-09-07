@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   test:
@@ -18,7 +19,7 @@ jobs:
 
       - name: go vet
         working-directory: template
-        run: go vet ./...
+        run: go vet -tags integration ./...
 
       - name: gofmt
         working-directory: template
@@ -44,3 +45,23 @@ jobs:
         with:
           version: v2.13.2
           working-directory: template
+          args: --build-tags integration
+
+  # The integration tier: the composed service as the binary, black-box,
+  # through its API. On merge to main and on demand, below the per-PR unit
+  # rate by design; a release is cut only from a main whose run has passed.
+  # A service with a backing service runs this against its compose stack as
+  # an isolated project, the way the reference service does.
+  integration:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.27"
+
+      - name: go test -tags integration
+        working-directory: template
+        run: go test -race -count=1 -tags integration ./integration/

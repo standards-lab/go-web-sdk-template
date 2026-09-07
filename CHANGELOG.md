@@ -7,6 +7,29 @@ generated service starts its own changelog; this one records the template's.
 
 ## [Unreleased]
 
+## [v0.7.0] - 2026-09-07
+
+The template gains its integration tier, engine-free, over the toolkit the SDKs now ship beside
+what it exercises. The module depends on `github.com/standards-lab/go-core v0.4.0` and
+`github.com/standards-lab/go-web-sdk v0.7.0`.
+
+### Added
+
+- `integration` — the integration tier: an untagged harness that builds `cmd/server` once per
+  run through go-core's `process/processtest`, runs it as a subprocess configured by `APP_*`
+  variables on a reserved port with no overlay applied, and observes its liveness probe through
+  go-web-sdk's `webtest` (`Main`, `Start`, `Launch`, `Service.Ready`, `Service.Client`); and,
+  under the `integration` build tag, the suite asserting the baseline: boot, both probes with
+  the `lifecycle` check, the drain to exit 0, and two instances side by side.
+- `mise run integration` runs the tagged suite against the built service; `vet` and `lint`
+  carry the tag. CI gains `workflow_dispatch` and an `integration` job on merge to main and on
+  demand, in both copies of the workflow. The README states the two tiers and the isolated
+  compose project a service adopts with its first backing service.
+
+### Changed
+
+- The module builds on go-core v0.4.0 and go-web-sdk v0.7.0 (from v0.3.0 and v0.6.0).
+
 ## [v0.6.0] - 2026-09-06
 
 The composition root is laid out as one file per layer of the architecture, and the template
@@ -184,7 +207,8 @@ depends on `github.com/standards-lab/go-core v0.1.0` and
   copies the subtree as a running service; the starter README carries the after-generation
   identity steps.
 
-[Unreleased]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.6.0...HEAD
+[Unreleased]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.7.0...HEAD
+[v0.7.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.6.0...template/v0.7.0
 [v0.6.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.5.0...template/v0.6.0
 [v0.5.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.4.0...template/v0.5.0
 [v0.4.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.3.0...template/v0.4.0
