@@ -4,13 +4,16 @@ The web service template of Go Elemental, the Standards Lab organization's Go im
 the Elemental Architecture: scaffolds an initial Go Elemental web service application with `gonew`, built on
 go-core and go-web-sdk. Managed with the marathon workflow; start from `context/README.md`.
 
-## Design is documented in the landing zone
+## Documentation lives in the repository
 
-The design and conventions of this repository are documented in the organization's
-[documentation landing zone](https://github.com/standards-lab/docs) — that is the authority.
-`context/` records only working knowledge the landing zone and the code do not express; do not
-restate documented design here. A change that alters documented behavior updates the landing
-zone page in the same effort.
+This repository documents its own implementation: the README states its place in the standard
+and the principles it enhances, and each package's `doc.go` is the authority for its API. The
+organization's [architecture repository](https://github.com/standards-lab/architecture) states the principles this repository follows
+and holds nothing a reader can infer from this source. `context/` records only working
+knowledge the code and the README do not express; do not restate documented design here. A
+change that alters documented behavior updates the README and the package documentation in
+the same effort, and a design note that generalizes past this repository is promoted to the
+architecture repository through its `context/`.
 
 ## Repository specifics
 

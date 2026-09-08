@@ -5,21 +5,13 @@ the Elemental Architecture: scaffolds an initial Go Elemental web service applic
 go-core and go-web-sdk at pinned releases, and the first code expression of the Elemental
 Architecture's application layout.
 
-The design and conventions of this repository are documented in the organization's
-[documentation landing zone](https://github.com/standards-lab/docs); this context records only
-working knowledge the landing zone and the code do not express. The repository page is
-[go-web-sdk-template](https://github.com/standards-lab/docs/blob/main/standards/go-elemental/go-web-sdk-template/index.md),
-under the [Go Elemental](https://github.com/standards-lab/docs/blob/main/standards/go-elemental/index.md)
-standard, with the design detailed in
-[The baseline](https://github.com/standards-lab/docs/blob/main/standards/go-elemental/go-web-sdk-template/baseline.md),
-[The elements in the template](https://github.com/standards-lab/docs/blob/main/standards/go-elemental/go-web-sdk-template/elements.md),
-and
-[The template subtree](https://github.com/standards-lab/docs/blob/main/standards/go-elemental/go-web-sdk-template/template-subtree.md).
+The README, the starter README, and each package's `doc.go` document this repository, and
+the [Go Elemental](https://github.com/standards-lab/architecture/blob/main/standards/go-elemental/README.md) standard states the principles it follows; this context records only
+working knowledge the code and the READMEs do not express.
 
 ## Capability map
 
-The code and each package's `doc.go` are authoritative for what is built; the landing zone
-documents the design.
+The code and each package's `doc.go` are authoritative for what is built.
 
 - **Runnable baseline** — built: the composition root `internal/app` as one file per layer on
   go-core's staged coordinator, the `internal/config` root with the `reads` policy block, the
@@ -33,7 +25,7 @@ documents the design.
 - **Integration tier** — built (`v1.data.sql.tasks.toolkit`, 2026-09-07): the `integration`
   package over the SDKs' toolkit, the `integration` task, and the CI job on merge to main.
   Engine-free: the isolated compose project is the reference service's pattern, adopted with
-  a first backing service. The landing zone page is due in `v1.alignment.docs`.
+  a first backing service.
 - **CI and release** — built: CI runs vet, race tests, and lint inside `template/` on every pull
   request and the integration tier on merge to main; releases are `template/v*` tags cut from
   the root `CHANGELOG.md`.
