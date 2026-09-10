@@ -1,8 +1,9 @@
 # go-web-sdk-template
 
-The web service template of Go Elemental, the Standards Lab organization's Go implementation of
-the Elemental Architecture: scaffolds an initial Go Elemental web service application with `gonew`, built on
-go-core and go-web-sdk. Managed with the marathon workflow; start from `context/README.md`.
+go-web-sdk-template is the web service template of Go Elemental, the Standards Lab
+organization's Go implementation of the Elemental Architecture. It scaffolds an initial Go
+Elemental web service application with `gonew`, built on go-core and go-web-sdk. The repository
+is managed with the marathon workflow; start from `context/README.md`.
 
 ## Documentation lives in the repository
 

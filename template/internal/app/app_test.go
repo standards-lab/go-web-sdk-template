@@ -77,11 +77,11 @@ func get(t *testing.T, addr, path string) (int, string) {
 	return resp.StatusCode, string(body)
 }
 
-// The baseline composition end to end: New assembles the process from the
-// package's build points, Run serves the probes, the readiness aggregate
-// reports the coordinator under the app's "lifecycle" name, the request
-// logger from the middleware stack records the traffic, and a cancel drains
-// to exit 0.
+// The baseline composition end to end. New assembles the process from the
+// package's build points. Run serves the probes, and the readiness
+// aggregate reports the coordinator under the app's "lifecycle" name. The
+// request logger from the middleware stack records the traffic, and a
+// cancel drains to exit 0.
 //
 // The full serve-and-drain pass exists because the baseline's infrastructure
 // is inert: no subsystem opens a connection, so startup always succeeds.

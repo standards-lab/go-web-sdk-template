@@ -28,7 +28,7 @@ type ReadsConfig struct {
 	Env ReadsEnv `json:"-"`
 }
 
-// ReadsEnv is the environment-variable names of the reads block.
+// ReadsEnv holds the environment-variable names of the reads block.
 type ReadsEnv struct {
 	DefaultSize string
 	MaxSize     string
