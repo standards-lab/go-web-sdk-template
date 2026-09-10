@@ -10,9 +10,9 @@ runnable web service on [go-core](https://github.com/standards-lab/go-core) and
   drained in order on shutdown;
 - liveness and readiness probes on `/healthz` and `/readyz`, fed by the lifecycle coordinator
   and the services' named checks;
-- the composition root as one file per layer of the architecture: infrastructure, admin,
-  domain, and reactors, each constructing its layer and owning its mount, with the list of
-  mounts and the middleware stack beside them.
+- the composition root as one file per architecture layer (infrastructure, admin, domain,
+  reactors), each constructing its layer and owning its mount, with the list of mounts and the
+  middleware stack beside them.
 
 New services are generated from it:
 

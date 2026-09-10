@@ -21,11 +21,11 @@ type readiness struct {
 	} `json:"checks"`
 }
 
-// The baseline composition as a running binary: the service boots on the
-// port the harness chose, the liveness probe answers, the readiness
-// aggregate reports the coordinator under the app's "lifecycle" name, and
-// an interrupt drains to exit 0. The build points a service fills in add
-// their own cases beside this one.
+// The baseline composition as a running binary. The service boots on the
+// port the harness chose. The liveness probe answers, and the readiness
+// aggregate reports the coordinator under the app's "lifecycle" name. An
+// interrupt drains to exit 0. The build points a service fills in add their
+// own cases beside this one.
 func TestLifecycle_BootProbeDrain(t *testing.T) {
 	s := integration.Start(t, integration.Options{})
 	c := s.Client()

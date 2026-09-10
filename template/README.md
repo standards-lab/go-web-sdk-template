@@ -52,9 +52,9 @@ Two tiers. The unit tier is hermetic and runs on every pull request: `go test -r
 touching no service, network, or disk. The integration tier is the `integration` package: an
 untagged harness that builds `cmd/server` once, runs it as a subprocess configured by `APP_*`
 variables on a port it reserved, and drives it through its HTTP surface, over the toolkit the
-SDKs ship for the purpose (go-core's `process/processtest`, go-web-sdk's `webtest`); and, under
-the `integration` build tag, the suite that asserts the service's behavior through its API. It
-runs on merge to main and on demand, below the per-PR rate by design.
+SDKs ship for the purpose (go-core's `process/processtest`, go-web-sdk's `webtest`). Under the
+`integration` build tag, the suite asserts the service's behavior through its API. It runs on
+merge to main and on demand, below the per-PR rate by design.
 
 The template's suite asserts the baseline: boot, both probes, and the drain. As the build points
 fill in, each capability adds its cases beside them, and the first backing service brings its
@@ -70,9 +70,11 @@ Configuration layers in a fixed precedence, later sources winning:
 2. `config.<APP_ENV>.json` — the environment overlay; `mise.toml` sets `APP_ENV=local`, which
    activates the committed `config.local.json` (loopback host, debug logging).
 3. `secrets.json`, `secrets.<APP_ENV>.json` — gitignored secret layers.
-4. `APP_*` environment variables — the final override: `APP_LOG_LEVEL`, `APP_LOG_FORMAT`,
-   `APP_SERVER_HOST`, `APP_SERVER_PORT`, the four server timeout variables,
-   `APP_READS_DEFAULT_SIZE`, `APP_READS_MAX_SIZE`, and `APP_SHUTDOWN_TIMEOUT`.
+4. `APP_*` environment variables — the final override:
+   - `APP_LOG_LEVEL`, `APP_LOG_FORMAT`
+   - `APP_SERVER_HOST`, `APP_SERVER_PORT`, and the four server timeout variables
+   - `APP_READS_DEFAULT_SIZE`, `APP_READS_MAX_SIZE`
+   - `APP_SHUTDOWN_TIMEOUT`
 
 Every file is optional — a deployment can run on the base file and environment variables alone,
 or on environment variables only.
@@ -80,17 +82,27 @@ or on environment variables only.
 ## Building out the service
 
 The composition root, `internal/app`, is laid out as one file per layer of the architecture,
-and those files are the build points: `infrastructure.go` for the services the application
-composes on, `admin.go` for the administrative services, `domain.go` for the domain services,
-`reactors.go` for the event-driven entry points, and `middleware.go` for the router-level
-middleware. Each layer file constructs its layer and owns its mount; `routes.go` lists the
-mounts and does nothing else. `cmd/server` is the entrypoint alone and never changes.
+and those files are the build points:
 
-A domain service starts from its Entity. Give the Entity its own package under `domain/`,
-expose its Queries and Commands as the domain service's methods, build the layer's route group
-in its handler, and construct the service and mount the group in `domain.go`: the constructor
-draws what it uses from the `Infrastructure` fields, and the handler is handed its policy from
-the config root at the construction site (`cfg.Reads.Limits()` for a collection read).
+- `infrastructure.go` for the services the application composes on
+- `admin.go` for the administrative services
+- `domain.go` for the domain services
+- `reactors.go` for the event-driven entry points
+- `middleware.go` for the router-level middleware
+
+Each layer file constructs its layer and owns its mount; `routes.go` lists the mounts and does
+nothing else. `cmd/server` is the entrypoint alone and never changes.
+
+A domain service starts from its Entity:
+
+1. Give the Entity its own package under `domain/`.
+2. Expose its Queries and Commands as the domain service's methods.
+3. Build the layer's route group in its handler.
+4. Construct the service and mount the group in `domain.go`.
+
+The constructor draws what it uses from the `Infrastructure` fields, and the handler is handed
+its policy from the config root at the construction site (`cfg.Reads.Limits()` for a collection
+read).
 
 An infrastructure service (a database pool, a storage client, an auth client) is a field on
 `Infrastructure` plus its construction in `newInfrastructure` (`internal/app/infrastructure.go`):

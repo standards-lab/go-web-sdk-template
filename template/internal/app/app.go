@@ -20,6 +20,11 @@ type App struct {
 	server *web.Server
 }
 
+// New assembles the application from cfg and a writer for its logger:
+// infrastructure, the admin layer, the domain, and the reactors, then the
+// router with its middleware and mounts, and the server as the
+// coordinator's root-stage service. It performs no I/O and returns before
+// Run starts the coordinator.
 func New(cfg *config.Config, w io.Writer) (*App, error) {
 	lc := lifecycle.New()
 
@@ -68,6 +73,9 @@ func New(cfg *config.Config, w io.Writer) (*App, error) {
 	}, nil
 }
 
+// Run starts the lifecycle coordinator and blocks until it drains, using
+// cfg's shutdown timeout. It logs and returns 1 on failure, or logs "server
+// stopped" and returns 0.
 func (a *App) Run(ctx context.Context) int {
 	if err := a.lc.Run(ctx, a.cfg.ShutdownTimeout.Duration()); err != nil {
 		a.logger.Error("service failed", "error", err)
