@@ -12,6 +12,7 @@ import (
 // reactor instead.
 func middleware(infra *Infrastructure) []web.Middleware {
 	return []web.Middleware{
+		mw.RequestID(),
 		mw.RequestLogger(infra.Logger),
 	}
 }
