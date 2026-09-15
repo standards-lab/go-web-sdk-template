@@ -7,6 +7,19 @@ generated service starts its own changelog; this one records the template's.
 
 ## [Unreleased]
 
+## [v0.9.0] - 2026-09-15
+
+The template wires go-web-sdk's request-id middleware into the composition root, so a consumer of
+go-web-sdk alone still gets a correlation id on every request, ahead of any infrastructure library
+that would otherwise supply one derived from a trace. The module still depends on
+`github.com/standards-lab/go-core v0.4.0` and `github.com/standards-lab/go-web-sdk v0.8.0`.
+
+### Added
+
+- `RequestID()` runs outermost in the middleware stack, ahead of `RequestLogger`, generating a
+  correlation id for every request. The id surfaces in the `X-Request-Id` response header, the
+  request logger's record, and any problem document's `request_id` extension member.
+
 ## [v0.8.0] - 2026-09-15
 
 The template moves onto go-web-sdk's problem vocabulary: readiness names the problem it reports

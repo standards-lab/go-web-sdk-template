@@ -14,6 +14,7 @@ import (
 	"github.com/standards-lab/go-web-sdk"
 	"github.com/standards-lab/go-web-sdk-template/template/internal/app"
 	"github.com/standards-lab/go-web-sdk-template/template/internal/config/configtest"
+	mw "github.com/standards-lab/go-web-sdk/middleware"
 )
 
 // failsafe bounds every wait for an event that should occur, so a broken
@@ -62,8 +63,9 @@ func waitForReady(t *testing.T, buf *syncBuffer) string {
 // delays the server's drain.
 var client = &http.Client{Transport: &http.Transport{DisableKeepAlives: true}}
 
-// get returns the status code and body of a GET against the running app.
-func get(t *testing.T, addr, path string) (int, string) {
+// get returns the status code, response header, and body of a GET against
+// the running app.
+func get(t *testing.T, addr, path string) (int, http.Header, string) {
 	t.Helper()
 	resp, err := client.Get(fmt.Sprintf("http://%s%s", addr, path))
 	if err != nil {
@@ -74,7 +76,7 @@ func get(t *testing.T, addr, path string) (int, string) {
 	if err != nil {
 		t.Fatalf("read %s body: %v", path, err)
 	}
-	return resp.StatusCode, string(body)
+	return resp.StatusCode, resp.Header, string(body)
 }
 
 // The baseline composition end to end. New assembles the process from the
@@ -102,11 +104,15 @@ func TestRun_ServesProbesThenDrains(t *testing.T) {
 
 	addr := waitForReady(t, buf)
 
-	if code, _ := get(t, addr, web.HealthPath); code != http.StatusOK {
+	code, header, _ := get(t, addr, web.HealthPath)
+	if code != http.StatusOK {
 		t.Errorf("GET %s = %d, want 200", web.HealthPath, code)
 	}
+	if header.Get(mw.RequestIDHeader) == "" {
+		t.Errorf("GET %s carries no %s response header; RequestID is not wired", web.HealthPath, mw.RequestIDHeader)
+	}
 
-	code, body := get(t, addr, web.ReadyPath)
+	code, _, body := get(t, addr, web.ReadyPath)
 	if code != http.StatusOK {
 		t.Errorf("GET %s = %d, want 200", web.ReadyPath, code)
 	}
