@@ -128,7 +128,7 @@ func TestRun_ServesProbesThenDrains(t *testing.T) {
 	if !strings.Contains(out, "server stopped") {
 		t.Error("log carries no stop record after the drain")
 	}
-	if !strings.Contains(out, "path="+web.HealthPath) {
+	if !strings.Contains(out, "url.path="+web.HealthPath) {
 		t.Error("log has no probe request record; the middleware stack is not wired")
 	}
 }

@@ -7,6 +7,22 @@ generated service starts its own changelog; this one records the template's.
 
 ## [Unreleased]
 
+## [v0.8.0] - 2026-09-15
+
+The template moves onto go-web-sdk's problem vocabulary: readiness names the problem it reports
+when a check fails. The module depends on `github.com/standards-lab/go-core v0.4.0` and
+`github.com/standards-lab/go-web-sdk v0.8.0`.
+
+### Changed
+
+- The go-web-sdk pin moves to v0.8.0 (from v0.7.0). `RegisterHealth` takes a `notReady Problem`
+  argument, the problem the readiness probe writes when a check fails; the template passes the
+  zero value, which keeps the SDK's defaults (type `about:blank`, status 503 with its status
+  text as the title, the generic detail, and the `checks` extension member), and the comment at
+  the call site marks it as where a generated service names its own problem type.
+- The app test asserts the request logger's `url.path` attribute, the name go-web-sdk v0.8.0
+  gives it; the earlier `path=` substring matched the new name by coincidence.
+
 ## [v0.7.0] - 2026-09-07
 
 The template gains its integration tier, engine-free, over the toolkit the SDKs now ship beside
@@ -212,7 +228,8 @@ depends on `github.com/standards-lab/go-core v0.1.0` and
   copies the subtree as a running service; the starter README carries the after-generation
   identity steps.
 
-[Unreleased]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.7.0...HEAD
+[Unreleased]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.8.0...HEAD
+[v0.8.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.7.0...template/v0.8.0
 [v0.7.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.6.0...template/v0.7.0
 [v0.6.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.5.0...template/v0.6.0
 [v0.5.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.4.0...template/v0.5.0

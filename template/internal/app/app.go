@@ -59,7 +59,11 @@ func New(cfg *config.Config, w io.Writer) (*App, error) {
 	})
 	lc.Monitor(server.Err())
 
-	web.RegisterHealth(router, lc)
+	// The zero Problem keeps the SDK's readiness defaults: type about:blank,
+	// status 503 with its status text as the title, the generic detail, and
+	// the checks extension member. A generated service names its own
+	// not-ready problem type here once it has one.
+	web.RegisterHealth(router, lc, web.Problem{})
 
 	lc.OnReady(func() {
 		infra.Logger.Info("server ready", "addr", server.Addr())
