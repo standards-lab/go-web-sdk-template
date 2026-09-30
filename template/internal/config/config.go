@@ -42,9 +42,10 @@ func (c *Config) Merge(src *Config) {
 // Finalize applies the root default, reads the root's own environment
 // override, validates, and finalizes each block under the same prefix. It
 // satisfies the config package's Load contract. An empty prefix composes
-// empty names, which read as no override, so it disables every environment
-// override — the hermetic form tests use. A non-positive shutdown timeout
-// is rejected here, since the lifecycle coordinator panics on one.
+// empty variable names, which read as no override, so it disables every
+// environment override; tests use this hermetic form. Finalize rejects a
+// non-positive shutdown timeout, since the lifecycle coordinator panics on
+// one.
 func (c *Config) Finalize(envPrefix string) error {
 	if c.ShutdownTimeout == 0 {
 		c.ShutdownTimeout = libconfig.Duration(defaultShutdownTimeout)

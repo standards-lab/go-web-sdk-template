@@ -1,12 +1,12 @@
 // Package integration is the service's integration tier: the harness that
 // runs the composed service as the binary and drives it through its
 // production seams, and, under the integration build tag, the suite that
-// asserts the service's behavior through its API. The harness runs over
-// the toolkit the SDKs ship, go-core's processtest and go-web-sdk's
-// webtest; nothing in the runtime exists for the tests' sake.
+// asserts the service's behavior through its API. The harness is built on
+// the SDKs' test toolkits, go-core's processtest and go-web-sdk's webtest;
+// nothing in the runtime exists for the tests' sake.
 //
 //   - [Main] is the suite's TestMain: it builds cmd/server once per run.
-//   - [Options] shapes one service process: the APP_* overrides it adds.
+//   - [Options] holds the APP_* overrides one service process adds.
 //   - [Start] runs the service on a reserved port and returns once it is
 //     live; [Launch] returns without waiting, and [Service.Ready] waits.
 //   - [Service] is one running process: [Service.Addr], [Service.URL], and

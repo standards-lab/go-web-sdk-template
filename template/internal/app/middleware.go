@@ -11,11 +11,13 @@ import (
 // reach a domain service is domain logic, and belongs in a route or a
 // reactor instead.
 //
-// RequestID runs ahead of RequestLogger, so the record carries the id;
-// Recoverer runs inside the logger, turning a handler's panic into a
-// logged 500 the logger records with its status. A BodyLimit, when a
-// service adds one, goes ahead of both: the chain order in go-web-sdk's
-// middleware package documentation states why.
+// RequestID runs ahead of RequestLogger, so the log record carries the
+// request id. Recoverer turns a handler's panic into a logged 500, which
+// RequestLogger records with its status; it works on either side of
+// RequestLogger, and the template places it inside. A
+// BodyLimit, when a service adds one, goes ahead of RequestLogger and
+// Recoverer; the chain order in go-web-sdk's middleware package
+// documentation states why.
 func middleware(infra *Infrastructure) []web.Middleware {
 	return []web.Middleware{
 		mw.RequestID(),

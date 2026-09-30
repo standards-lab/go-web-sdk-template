@@ -78,8 +78,8 @@ Configuration layers in a fixed precedence, later sources winning:
    - `APP_SHUTDOWN_TIMEOUT`
 
 Every file is optional — a deployment can run on the base file and environment variables alone,
-or on environment variables only. Every file present decodes strictly: a key the `Config` types
-do not declare fails the load.
+or on environment variables only. Each file present decodes strictly: a key the `Config` types do
+not declare fails the load.
 
 ## Building out the service
 
@@ -139,9 +139,9 @@ constructed in `newReactors` (`internal/app/reactors.go`) and registered on the 
 same as an infrastructure service, dispatching each occurrence to a domain service call.
 
 Middleware that applies to every route stacks in `middleware` (`internal/app/middleware.go`),
-outermost first: the template ships `RequestID`, `RequestLogger`, and `Recoverer`, in the chain
-order go-web-sdk's `middleware` package documents. Middleware scoped to one domain service belongs
-on its route group.
+outermost first. The template ships `RequestID`, `RequestLogger`, and `Recoverer`, in the chain
+order that go-web-sdk's `middleware` package documents. Middleware scoped to one domain service
+belongs on its route group.
 
 Configuration grows by adding fields to `Config` in `internal/config/config.go` and delegating
 to their `Merge` and `Finalize` in the existing shape; the `reads` block is the model for a

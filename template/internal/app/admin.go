@@ -29,9 +29,9 @@ func newAdmin(
 }
 
 // mountAdmin builds the admin mount, /admin, with each admin domain's route
-// group mounted into it, each group's error writer logging through logger.
-// The template ships the group initialized and empty.
-// In production the mount belongs on its own listener, authenticated and
+// group mounted into it and each group's error writer logging through
+// logger. The template ships the group initialized and empty. In
+// production the mount belongs on its own listener, authenticated and
 // unreachable from the public API's network path; that isolation is a
 // design constraint the application settles when the first admin service
 // arrives.
