@@ -23,9 +23,9 @@ type Infrastructure struct {
 
 // newInfrastructure constructs the infrastructure services in one place, in
 // dependency order, each registering on lc where it is built — as a
-// lifecycle.Service with the stage that places it in the process's startup
-// order — so a service cannot exist without a startup, shutdown, or
-// readiness declaration. Construction opens nothing: connectivity belongs
+// lifecycle.Service at its stage from the stage table (stages.go) — so a
+// service cannot exist without a startup, shutdown, or readiness
+// declaration. Construction opens nothing: connectivity belongs
 // to a service's Start hook, so a failed cold start leaks no connections.
 // lc goes unused today, because the template's one service, Logger, has no
 // lifecycle; it stays a parameter so the first service that needs one — a

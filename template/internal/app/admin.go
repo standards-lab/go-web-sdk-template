@@ -1,6 +1,8 @@
 package app
 
 import (
+	"log/slog"
+
 	"github.com/standards-lab/go-core/lifecycle"
 	"github.com/standards-lab/go-web-sdk"
 	"github.com/standards-lab/go-web-sdk-template/template/internal/config"
@@ -27,11 +29,12 @@ func newAdmin(
 }
 
 // mountAdmin builds the admin mount, /admin, with each admin domain's route
-// group mounted into it. The template ships the group initialized and empty.
+// group mounted into it, each group's error writer logging through logger.
+// The template ships the group initialized and empty.
 // In production the mount belongs on its own listener, authenticated and
 // unreachable from the public API's network path; that isolation is a
 // design constraint the application settles when the first admin service
 // arrives.
-func mountAdmin(adm *Admin) *web.Group {
+func mountAdmin(adm *Admin, logger *slog.Logger) *web.Group {
 	return web.NewGroup("/admin")
 }

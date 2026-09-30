@@ -46,14 +46,14 @@ func New(cfg *config.Config, w io.Writer) (*App, error) {
 
 	router := web.NewRouter()
 	router.Use(middleware(infra)...)
-	for _, m := range routes(dom, adm, cfg) {
+	for _, m := range routes(dom, adm, cfg, infra.Logger) {
 		router.Mount(m)
 	}
 
-	server := web.NewServer(cfg.Server, router)
+	server := web.NewServer(cfg.Server, router, infra.Logger)
 	lc.Add(lifecycle.Service{
 		Name:     "server",
-		Stage:    lifecycle.StageRoot,
+		Stage:    stageRoot,
 		Start:    server.Start,
 		Shutdown: server.Shutdown,
 	})

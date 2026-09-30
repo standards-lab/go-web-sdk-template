@@ -7,6 +7,38 @@ generated service starts its own changelog; this one records the template's.
 
 ## [Unreleased]
 
+## [v0.10.0] - 2026-09-30
+
+The template moves onto the storage suite's closing releases, go-core v0.5.0 and go-web-sdk
+v0.13.0, and adopts their idioms: the service's logger reaches the server and every mount's error
+writer, `Recoverer` joins the middleware stack, and the lifecycle stages are named in one table.
+The module depends on `github.com/standards-lab/go-core v0.5.0` and
+`github.com/standards-lab/go-web-sdk v0.13.0`.
+
+### Added
+
+- `internal/app/stages.go` — the stage table: `stageInfrastructure` and `stageRoot`, the stages
+  every layer file registers at, with a test that the table ascends. The server registers at
+  `stageRoot`, and the starter README's infrastructure example at `stageInfrastructure`.
+- `Recoverer` runs in the middleware stack inside `RequestLogger`, so a handler's panic becomes a
+  logged 500 problem that carries the request id.
+- The integration suite loads the committed `config.local.json` overlay, which go-core now
+  decodes strictly.
+
+### Changed
+
+- **Breaking:** the go-core pin moves to v0.5.0 (from v0.4.0) and the go-web-sdk pin to v0.13.0
+  (from v0.8.0). `web.NewServer` takes the service's logger. `config.Load` rejects a key the
+  `Config` types do not declare, data after the top-level value, and an empty file, in every
+  layer.
+- `routes`, `mountAPI`, and `mountAdmin` take the service's logger, which a route
+  group's `web.NewErrorWriter` takes as its first argument.
+- `internal/config` drops its empty-prefix guards, since `config.EnvName` returns an empty name
+  for an empty prefix, and the reads overrides use `config.SetFromEnv` in place of the
+  hand-rolled `setIntFromEnv`. The error names and messages are unchanged.
+- The package comments of `internal/app`, `internal/config`, and `integration` list their
+  exports; the starter README lists the `build` task.
+
 ## [v0.9.0] - 2026-09-15
 
 The template wires go-web-sdk's request-id middleware into the composition root, so a consumer of
@@ -241,7 +273,9 @@ depends on `github.com/standards-lab/go-core v0.1.0` and
   copies the subtree as a running service; the starter README carries the after-generation
   identity steps.
 
-[Unreleased]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.8.0...HEAD
+[Unreleased]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.10.0...HEAD
+[v0.10.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.9.0...template/v0.10.0
+[v0.9.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.8.0...template/v0.9.0
 [v0.8.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.7.0...template/v0.8.0
 [v0.7.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.6.0...template/v0.7.0
 [v0.6.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.5.0...template/v0.6.0

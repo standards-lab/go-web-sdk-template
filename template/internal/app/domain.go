@@ -1,6 +1,8 @@
 package app
 
 import (
+	"log/slog"
+
 	"github.com/standards-lab/go-web-sdk"
 	"github.com/standards-lab/go-web-sdk-template/template/internal/config"
 )
@@ -25,8 +27,9 @@ func newDomain(infra *Infrastructure) *Domain {
 
 // mountAPI builds the API mount, /api, with each domain layer's route group
 // mounted into it, each handler handed its policy from cfg at the
-// construction site (cfg.Reads.Limits() for a collection read). The
-// template ships the group initialized and empty.
-func mountAPI(dom *Domain, cfg *config.Config) *web.Group {
+// construction site (cfg.Reads.Limits() for a collection read) and logger
+// for its error writer (web.NewErrorWriter(logger, ...)). The template
+// ships the group initialized and empty.
+func mountAPI(dom *Domain, cfg *config.Config, logger *slog.Logger) *web.Group {
 	return web.NewGroup("/api")
 }
