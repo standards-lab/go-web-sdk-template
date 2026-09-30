@@ -73,7 +73,8 @@ Configuration layers in a fixed precedence, later sources winning:
 3. `secrets.json`, `secrets.<APP_ENV>.json` — gitignored secret layers.
 4. `APP_*` environment variables — the final override:
    - `APP_LOG_LEVEL`, `APP_LOG_FORMAT`
-   - `APP_SERVER_HOST`, `APP_SERVER_PORT`, and the four server timeout variables
+   - `APP_SERVER_HOST`, `APP_SERVER_PORT`, the four server timeout variables, and
+     `APP_SERVER_TRANSFER_RATE`
    - `APP_READS_DEFAULT_SIZE`, `APP_READS_MAX_SIZE`
    - `APP_SHUTDOWN_TIMEOUT`
 

@@ -7,6 +7,20 @@ generated service starts its own changelog; this one records the template's.
 
 ## [Unreleased]
 
+## [v0.11.0] - 2026-09-30
+
+The template moves onto go-web-sdk v0.14.0, whose server timeouts are tight by default. The module
+depends on `github.com/standards-lab/go-core v0.5.0` and `github.com/standards-lab/go-web-sdk
+v0.14.0`.
+
+### Changed
+
+- `config.json` carries go-web-sdk's new defaults: the read and write timeouts are 30 seconds each,
+  down from 1 minute and 15 minutes, and `transfer_rate` is 64 KiB/s. A generated service with a
+  route that moves a large body, an upload or a download, sets that route's deadlines through
+  `web.Transfer` (`Config.Transfer(limit)`, then `WidenUpload` or `WidenDownload`), and keeps it
+  out from under a `middleware.Timeout` shorter than its transfer.
+
 ## [v0.10.0] - 2026-09-30
 
 The template moves onto go-core v0.5.0 and go-web-sdk v0.13.0 and adopts their idioms: the
@@ -282,7 +296,8 @@ depends on `github.com/standards-lab/go-core v0.1.0` and
   copies the subtree as a running service; the starter README carries the after-generation
   identity steps.
 
-[Unreleased]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.10.0...HEAD
+[Unreleased]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.11.0...HEAD
+[v0.11.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.10.0...template/v0.11.0
 [v0.10.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.9.0...template/v0.10.0
 [v0.9.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.8.0...template/v0.9.0
 [v0.8.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.7.0...template/v0.8.0
