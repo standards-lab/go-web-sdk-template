@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 
 	libconfig "github.com/standards-lab/go-core/config"
@@ -49,11 +48,11 @@ func (c *ReadsConfig) Merge(src *ReadsConfig) {
 	}
 }
 
-// Finalize applies the defaults, reads the block's environment overrides
-// when a prefix is given, and validates: DefaultSize at least 1 and MaxSize
-// at least DefaultSize, the invariant web.ParseQuery panics on, caught here
-// as configuration rather than at the first request. An empty prefix
-// disables the overrides.
+// Finalize applies the defaults, reads the block's environment overrides,
+// and validates: DefaultSize at least 1 and MaxSize at least DefaultSize,
+// the invariant web.ParseQuery panics on, caught here as configuration
+// rather than at the first request. An empty prefix composes empty names,
+// which disable the overrides.
 func (c *ReadsConfig) Finalize(envPrefix string) error {
 	if c.DefaultSize == nil {
 		c.DefaultSize = new(defaultReadsDefaultSize)
@@ -61,15 +60,13 @@ func (c *ReadsConfig) Finalize(envPrefix string) error {
 	if c.MaxSize == nil {
 		c.MaxSize = new(defaultReadsMaxSize)
 	}
-	if envPrefix != "" {
-		c.Env.DefaultSize = libconfig.EnvName(envPrefix, "reads_default_size")
-		c.Env.MaxSize = libconfig.EnvName(envPrefix, "reads_max_size")
-		if err := setIntFromEnv(c.DefaultSize, c.Env.DefaultSize); err != nil {
-			return err
-		}
-		if err := setIntFromEnv(c.MaxSize, c.Env.MaxSize); err != nil {
-			return err
-		}
+	c.Env.DefaultSize = libconfig.EnvName(envPrefix, "reads_default_size")
+	c.Env.MaxSize = libconfig.EnvName(envPrefix, "reads_max_size")
+	if err := libconfig.SetFromEnv(&c.DefaultSize, c.Env.DefaultSize, strconv.Atoi); err != nil {
+		return err
+	}
+	if err := libconfig.SetFromEnv(&c.MaxSize, c.Env.MaxSize, strconv.Atoi); err != nil {
+		return err
 	}
 	if *c.DefaultSize < 1 {
 		return fmt.Errorf("default_size must be at least 1, got %d", *c.DefaultSize)
@@ -83,18 +80,4 @@ func (c *ReadsConfig) Finalize(envPrefix string) error {
 // Limits hands the finalized policy to a handler constructor.
 func (c ReadsConfig) Limits() web.Limits {
 	return web.Limits{DefaultSize: *c.DefaultSize, MaxSize: *c.MaxSize}
-}
-
-// setIntFromEnv overwrites dst with the integer named by name when it is set.
-func setIntFromEnv(dst *int, name string) error {
-	v := os.Getenv(name)
-	if v == "" {
-		return nil
-	}
-	n, err := strconv.Atoi(v)
-	if err != nil {
-		return fmt.Errorf("%s: %w", name, err)
-	}
-	*dst = n
-	return nil
 }

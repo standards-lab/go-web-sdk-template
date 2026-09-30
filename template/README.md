@@ -38,6 +38,7 @@ Each task wraps a plain command, so the repository works without mise:
 
 | Task | Command | What it does |
 |------|---------|--------------|
+| `mise run build` | `go build ./...` | Build the module |
 | `mise run vet` | `go vet -tags integration ./...` | Compile-check and vet, the integration suite included |
 | `mise run serve` | `go run ./cmd/server` | Run the service locally |
 | `mise run test` | `go test -race ./...` | Run the unit tier |
@@ -77,7 +78,8 @@ Configuration layers in a fixed precedence, later sources winning:
    - `APP_SHUTDOWN_TIMEOUT`
 
 Every file is optional — a deployment can run on the base file and environment variables alone,
-or on environment variables only.
+or on environment variables only. Each file present decodes strictly: a key the `Config` types do
+not declare fails the load.
 
 ## Building out the service
 
@@ -91,7 +93,8 @@ and those files are the build points:
 - `middleware.go` for the router-level middleware
 
 Each layer file constructs its layer and owns its mount; `routes.go` lists the mounts and does
-nothing else. `cmd/server` is the entrypoint alone and never changes.
+nothing else, and `stages.go` names every lifecycle stage the process uses. `cmd/server` is the
+entrypoint alone and never changes.
 
 A domain service starts from its Entity:
 
@@ -102,21 +105,26 @@ A domain service starts from its Entity:
 
 The constructor draws what it uses from the `Infrastructure` fields, and the handler is handed
 its policy from the config root at the construction site (`cfg.Reads.Limits()` for a collection
-read).
+read) and the service's logger for its error writer (`web.NewErrorWriter(logger, ...)`).
 
 An infrastructure service (a database pool, a storage client, an auth client) is a field on
 `Infrastructure` plus its construction in `newInfrastructure` (`internal/app/infrastructure.go`):
-assign the field, then declare the lifecycle on the coordinator —
+declare its lifecycle on the coordinator and set the field in the struct it returns —
 
 ```go
-i.DB = db
-lc.Add(lifecycle.Service{Name: "database", Stage: 0, Start: db.Start, Shutdown: db.Shutdown, Check: db})
+lc.Add(lifecycle.Service{Name: "database", Stage: stageInfrastructure, Start: db.Start, Shutdown: db.Shutdown, Check: db})
+
+return &Infrastructure{
+	Logger: logger,
+	DB:     db,
+}, nil
 ```
 
-Numbered stages start in ascending order ahead of the server's root stage and drain after it,
-so in-flight requests complete before their infrastructure closes. A service declared this way
-cannot be missing from the probe or the drain, and a field that does not exist fails the build
-at its access.
+A service registers at a stage named in the stage table (`internal/app/stages.go`), never at a
+number of its own; a new stage is a new row there. Stages start in ascending order ahead of the
+server's root stage and drain after it, so in-flight requests complete before their
+infrastructure closes. A service declared this way cannot be missing from the probe or the drain,
+and a field that does not exist fails the build at its access.
 
 An admin service administers one infrastructure service over the mechanisms its library
 provides, and is a field on `Admin` constructed in `newAdmin` (`internal/app/admin.go`) with its
@@ -131,7 +139,9 @@ constructed in `newReactors` (`internal/app/reactors.go`) and registered on the 
 same as an infrastructure service, dispatching each occurrence to a domain service call.
 
 Middleware that applies to every route stacks in `middleware` (`internal/app/middleware.go`),
-outermost first; middleware scoped to one domain service belongs on its route group.
+outermost first. The template ships `RequestID`, `RequestLogger`, and `Recoverer`, in the chain
+order that go-web-sdk's `middleware` package documents. Middleware scoped to one domain service
+belongs on its route group.
 
 Configuration grows by adding fields to `Config` in `internal/config/config.go` and delegating
 to their `Merge` and `Finalize` in the existing shape; the `reads` block is the model for a

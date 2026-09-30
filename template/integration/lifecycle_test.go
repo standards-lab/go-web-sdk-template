@@ -74,3 +74,13 @@ func TestLifecycle_TwoInstances(t *testing.T) {
 		t.Errorf("b exit = %d:\n%s", code, b.Output())
 	}
 }
+
+// The committed local overlay decodes strictly against the configuration
+// types: a key a type does not declare fails the load, and the service
+// never becomes live. The harness's own variables still win over it.
+func TestLifecycle_LocalOverlayLoads(t *testing.T) {
+	s := integration.Start(t, integration.Options{Env: []string{"APP_ENV=local"}})
+	if code := s.Stop(t); code != 0 {
+		t.Fatalf("exit = %d, want 0:\n%s", code, s.Output())
+	}
+}

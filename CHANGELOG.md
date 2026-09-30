@@ -7,6 +7,47 @@ generated service starts its own changelog; this one records the template's.
 
 ## [Unreleased]
 
+## [v0.10.0] - 2026-09-30
+
+The template moves onto go-core v0.5.0 and go-web-sdk v0.13.0 and adopts their idioms: the
+service's logger reaches the server and every mount's error writer, `Recoverer` joins the
+middleware stack, and one table names the lifecycle stages. The module depends on
+`github.com/standards-lab/go-core v0.5.0` and `github.com/standards-lab/go-web-sdk v0.13.0`.
+
+A generated service that ports this release also takes the libraries' own breaking changes since
+its previous pins; the go-web-sdk and go-core CHANGELOGs list them. A service with handlers meets
+these:
+
+- `web.NewErrorWriter` takes the logger first, and `ErrorWriter.Log` and `Server.Log` are gone.
+- `NewPage` takes a `Paging`, whose `Total` is an `*int`, and `NoTotal` is gone.
+- A returned bare `Problem` is sent as is, past the matchers.
+- `cursor` is a reserved query parameter.
+- `config.Load` refuses an overlay environment value holding `/`, `\`, or `..`.
+
+### Added
+
+- `internal/app/stages.go` holds the stage table, which names the stages every layer file
+  registers at: `stageInfrastructure` and `stageRoot`. A test checks that the table ascends. The
+  server registers at `stageRoot`, and the starter README's infrastructure example registers at
+  `stageInfrastructure`.
+- `Recoverer` runs in the middleware stack inside `RequestLogger`, so a handler's panic becomes a
+  logged 500 problem that carries the request id.
+- The integration suite loads the committed `config.local.json` overlay, which go-core now
+  decodes strictly.
+
+### Changed
+
+- **Breaking:** the go-core pin moves to v0.5.0 (from v0.4.0) and the go-web-sdk pin to v0.13.0
+  (from v0.8.0). `web.NewServer` takes the service's logger. In every layer, `config.Load`
+  rejects a key the `Config` types do not declare and any data after the top-level value.
+- **Breaking** for a service that ports it: `routes`, `mountAPI`, and `mountAdmin` take the
+  service's logger, the first argument of each route group's `web.NewErrorWriter`.
+- `internal/config` drops its empty-prefix guards, since `config.EnvName` returns an empty name
+  for an empty prefix. The reads overrides use `config.SetFromEnv` in place of the hand-rolled
+  `setIntFromEnv`. The error names and messages are unchanged.
+- The package comments of `internal/app`, `internal/config`, and `integration` list their
+  exports, and the starter README lists the `build` task.
+
 ## [v0.9.0] - 2026-09-15
 
 The template wires go-web-sdk's request-id middleware into the composition root, so a consumer of
@@ -241,7 +282,9 @@ depends on `github.com/standards-lab/go-core v0.1.0` and
   copies the subtree as a running service; the starter README carries the after-generation
   identity steps.
 
-[Unreleased]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.8.0...HEAD
+[Unreleased]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.10.0...HEAD
+[v0.10.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.9.0...template/v0.10.0
+[v0.9.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.8.0...template/v0.9.0
 [v0.8.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.7.0...template/v0.8.0
 [v0.7.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.6.0...template/v0.7.0
 [v0.6.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.5.0...template/v0.6.0

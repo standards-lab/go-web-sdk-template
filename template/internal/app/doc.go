@@ -1,35 +1,35 @@
-// Package app is the composition root, laid out as one file per layer of
-// the architecture:
+// Package app is the composition root. Each architecture layer has one
+// file, which constructs the layer and owns its mount, so the layer files
+// are the architecture's layer list:
 //
-//   - infrastructure.go constructs the services the application is composed on
-//   - admin.go constructs the administrative services and their /admin mount
-//   - domain.go constructs the domain services and their /api mount
-//   - reactors.go constructs the event-driven entry points
+//   - infrastructure.go: [Infrastructure], the services the application is
+//     composed on;
+//   - admin.go: [Admin], the administrative services, and their /admin mount;
+//   - domain.go: [Domain], the domain services, and their /api mount;
+//   - reactors.go: [Reactors], the event-driven entry points;
+//   - stages.go: the stage table every layer file registers from;
+//   - routes.go: the list of mounts;
+//   - middleware.go: the router-level middleware stack, outermost first.
 //
-// routes.go is the list of mounts, and middleware.go declares the
-// router-level middleware stack, outermost first. Each layer file
-// constructs its layer and owns its mount, so the package's file list is
-// the architecture's layer list. Extending the service means editing a
-// layer file's body; the signatures, cmd/server, and [App.Run] stay
-// untouched.
-//
-// [New] is the cold start, with no I/O: it constructs infrastructure (each
-// service registering on the coordinator where it is constructed), the
-// admin layer over it, the domain over it, and the reactors over both, then
-// assembles the router from the mounts and the middleware stack. It then
-// declares the server as the coordinator's root-stage service, started
-// after every infrastructure stage and drained first, so in-flight requests
-// complete before the infrastructure beneath them closes. The probes
-// register on the router's native mux, outside every module's middleware,
-// and query the coordinator live on every request, aggregating it under the
-// "lifecycle" name ahead of its services' own checks. Wiring mistakes panic
-// at construction.
+// [App] is the assembled process. [New] is the cold start and performs no
+// I/O. It constructs the infrastructure, each service registering on the
+// coordinator where it is constructed, at a stage the table names; then the
+// admin layer over the infrastructure, the domain over it, and the reactors
+// over both. It then assembles the router from the mounts and the
+// middleware stack. The server is the coordinator's root-stage service: it
+// starts after every other stage and drains first, so in-flight requests
+// complete before the infrastructure beneath them closes. The service's
+// logger reaches the server, the middleware, and every mount's error
+// writer. The probes register on the router's native mux, outside every
+// module's middleware, query live on every request, and report the
+// coordinator's status under the "lifecycle" name, ahead of the services'
+// own checks. Wiring mistakes panic at construction. [App.Run] is the
+// hot start plus shutdown, delegated to the coordinator, and returns the
+// process exit code.
 //
 // Routes and reactors are the two ways a domain service enters the running
-// process: a route is driven by a caller, a reactor by an occurrence the
-// process receives or discovers. Both take *Domain; neither is a domain
-// service itself.
-//
-// [App.Run] is the hot start plus shutdown, delegated to the coordinator,
-// and returns the process exit code.
+// process: a caller drives a route, and an occurrence the process receives
+// or discovers drives a reactor. Both take *Domain; neither is a domain
+// service itself. Extending the service means editing a layer file's body;
+// the signatures, cmd/server, and [App.Run] stay untouched.
 package app
