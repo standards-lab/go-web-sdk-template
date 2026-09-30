@@ -15,6 +15,13 @@ writer, `Recoverer` joins the middleware stack, and the lifecycle stages are nam
 The module depends on `github.com/standards-lab/go-core v0.5.0` and
 `github.com/standards-lab/go-web-sdk v0.13.0`.
 
+A generated service ports this release with the libraries' own breaking changes since the pins it
+last took; the go-web-sdk and go-core CHANGELOGs list them. Those a service with handlers meets:
+`web.NewErrorWriter` takes the logger first, and `ErrorWriter.Log` and `Server.Log` are gone;
+`NewPage` takes a `Paging`, whose `Total` is an `*int`, and `NoTotal` is gone; a returned bare
+`Problem` is sent as is, past the matchers; `cursor` is a reserved query parameter; and
+`config.Load` refuses an overlay environment value holding `/`, `\`, or `..`.
+
 ### Added
 
 - `internal/app/stages.go` — the stage table: `stageInfrastructure` and `stageRoot`, the stages
@@ -29,10 +36,9 @@ The module depends on `github.com/standards-lab/go-core v0.5.0` and
 
 - **Breaking:** the go-core pin moves to v0.5.0 (from v0.4.0) and the go-web-sdk pin to v0.13.0
   (from v0.8.0). `web.NewServer` takes the service's logger. `config.Load` rejects a key the
-  `Config` types do not declare, data after the top-level value, and an empty file, in every
-  layer.
-- `routes`, `mountAPI`, and `mountAdmin` take the service's logger, which a route
-  group's `web.NewErrorWriter` takes as its first argument.
+  `Config` types do not declare and data after the top-level value, in every layer.
+- **Breaking** for a service that ports it: `routes`, `mountAPI`, and `mountAdmin` take the
+  service's logger, which each route group's `web.NewErrorWriter` takes as its first argument.
 - `internal/config` drops its empty-prefix guards, since `config.EnvName` returns an empty name
   for an empty prefix, and the reads overrides use `config.SetFromEnv` in place of the
   hand-rolled `setIntFromEnv`. The error names and messages are unchanged.

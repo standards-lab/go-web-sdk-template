@@ -93,7 +93,8 @@ and those files are the build points:
 - `middleware.go` for the router-level middleware
 
 Each layer file constructs its layer and owns its mount; `routes.go` lists the mounts and does
-nothing else, and `stages.go` names every lifecycle stage the process uses. `cmd/server` is the entrypoint alone and never changes.
+nothing else, and `stages.go` names every lifecycle stage the process uses. `cmd/server` is the
+entrypoint alone and never changes.
 
 A domain service starts from its Entity:
 
@@ -108,19 +109,22 @@ read) and the service's logger for its error writer (`web.NewErrorWriter(logger,
 
 An infrastructure service (a database pool, a storage client, an auth client) is a field on
 `Infrastructure` plus its construction in `newInfrastructure` (`internal/app/infrastructure.go`):
-assign the field, then declare the lifecycle on the coordinator —
+declare its lifecycle on the coordinator and set the field in the struct it returns —
 
 ```go
-i.DB = db
 lc.Add(lifecycle.Service{Name: "database", Stage: stageInfrastructure, Start: db.Start, Shutdown: db.Shutdown, Check: db})
+
+return &Infrastructure{
+	Logger: logger,
+	DB:     db,
+}, nil
 ```
 
 A service registers at a stage named in the stage table (`internal/app/stages.go`), never at a
 number of its own; a new stage is a new row there. Stages start in ascending order ahead of the
 server's root stage and drain after it, so in-flight requests complete before their
-infrastructure closes. A service declared this way
-cannot be missing from the probe or the drain, and a field that does not exist fails the build
-at its access.
+infrastructure closes. A service declared this way cannot be missing from the probe or the drain,
+and a field that does not exist fails the build at its access.
 
 An admin service administers one infrastructure service over the mechanisms its library
 provides, and is a field on `Admin` constructed in `newAdmin` (`internal/app/admin.go`) with its
