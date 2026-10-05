@@ -29,6 +29,26 @@ for mod in $GO_MODULES; do
 done
 '''
 
+# currency runs through bash: gonew does not keep the script's executable bit.
+[tasks.currency]
+description = "Report every requirement, Go version, tool, and action pin behind its latest; writes nothing"
+run = "bash scripts/currency.sh"
+
+[tasks.upgrade]
+description = "Upgrade every module's direct requirements and the local mise tools to their latest, rewriting go.mod and mise.toml"
+run = '''
+set -eu
+export GOWORK=off
+for mod in $GO_MODULES; do
+  cd "$MISE_PROJECT_ROOT/$mod"
+  direct=$(go mod edit -json | jq -r '.Require[]? | select(.Indirect | not) | .Path')
+  [ -z "$direct" ] || go get $(printf '%s@latest ' $direct)
+  go mod tidy
+done
+cd "$MISE_PROJECT_ROOT"
+mise upgrade --bump --local
+'''
+
 [tasks.build]
 description = "Build the module"
 run = "go build ./..."
