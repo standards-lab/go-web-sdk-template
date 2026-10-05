@@ -26,7 +26,7 @@ package's `doc.go` are authoritative for it.
 - **Integration tier**: the `integration` package runs over the SDKs' toolkit, through the
   `integration` task and the CI job on merge to main. The tier is engine-free. Planned: with its
   first backing service, the template adopts the reference service's isolated compose project.
-- **CI and release**: CI runs vet, race tests, and lint inside `template/` on every pull
+- **CI and release**: CI runs `mise run check` inside `template/` on every pull
   request and the integration tier on merge to main; releases are `template/v*` tags cut from
   the root `CHANGELOG.md`.
 - **Candidate direction**: the admin layer's content and the database infrastructure patterns

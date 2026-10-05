@@ -8,39 +8,15 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
 
-      - uses: actions/setup-go@v7.0.0
-        with:
-          go-version: "1.27"
+      - uses: jdx/mise-action@v5.1.1
 
-      - name: go vet
-        run: go vet -tags integration ./...
-
-      - name: gofmt
-        run: |
-          unformatted=$(gofmt -l .)
-          [ -z "$unformatted" ] || { echo "$unformatted"; exit 1; }
-
-      - name: go mod tidy -diff
-        run: go mod tidy -diff
-
-      - name: go test -race
-        run: go test -race ./...
-
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7.0.1
-
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v9.3.0
-        with:
-          version: v2.14.0
-          args: --build-tags integration
+      - name: mise run check
+        run: mise run check
 
   # The integration tier: the composed service as the binary, black-box,
   # through its API. On merge to main and on demand, below the per-PR unit
