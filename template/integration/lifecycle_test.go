@@ -8,8 +8,9 @@ import (
 	"testing"
 
 	"github.com/standards-lab/go-web-sdk"
-	"github.com/standards-lab/go-web-sdk-template/template/integration"
 	"github.com/standards-lab/go-web-sdk/webtest"
+
+	"github.com/standards-lab/go-web-sdk-template/template/integration"
 )
 
 // The probe bodies, as the SDK writes them.

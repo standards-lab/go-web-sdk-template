@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/standards-lab/go-core/logging"
+
 	"github.com/standards-lab/go-web-sdk-template/template/internal/config"
 )
 

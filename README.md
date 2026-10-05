@@ -66,11 +66,12 @@ commit.
 ```sh
 cd template
 mise trust && mise install
-mise run test
+mise run check
 ```
 
-`template/mise.toml` carries the tasks, each wrapping a plain command; `template/README.md`
-lists them.
+`template/mise.toml` carries the tasks: `check` (the one read-only check CI runs),
+`currency` (what trails its latest), `upgrade`, and the plain-command wrappers;
+`template/README.md` lists them.
 
 ## License
 

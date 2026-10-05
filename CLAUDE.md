@@ -30,7 +30,7 @@ architecture repository through its `context/`.
   `.github/workflows/release.yml`.
 - **Tasks.** `template/mise.toml` defines the tasks; development runs inside `template/`. The
   subtree's CI workflow is a copy of the root one minus the lines that locate the subtree,
-  `working-directory` and `cache-dependency-path` (the dual-copy rule: a change to either copy
+  `-C template`, `working_directory`, and `working-directory` (the dual-copy rule: a change to either copy
   lands in the other in the same commit). The two `.gitignore` files differ deliberately: the
   root adds the management layer's entries (`.claude/plans/`, `mise.local.toml`); the subtree
   carries only what a generated service needs.

@@ -8,6 +8,7 @@ import (
 	libconfig "github.com/standards-lab/go-core/config"
 	"github.com/standards-lab/go-core/logging"
 	"github.com/standards-lab/go-web-sdk"
+
 	"github.com/standards-lab/go-web-sdk-template/template/internal/config"
 )
 
