@@ -7,6 +7,12 @@ generated service starts its own changelog; this one records the template's.
 
 ## [Unreleased]
 
+### Changed
+
+- golangci-lint's `testpackage` check fails on any white-box test file except `export_test.go`,
+  which may only export a clock or probe hook; every test drives the exported API from `<pkg>_test`.
+  A generated service inherits the rule.
+
 ## [v0.11.0] - 2026-09-30
 
 The template moves onto go-web-sdk v0.14.0, whose server timeouts are tight by default. The module

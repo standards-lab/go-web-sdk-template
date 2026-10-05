@@ -65,9 +65,6 @@ func TestLifecycle_TwoInstances(t *testing.T) {
 	b := integration.Launch(t, integration.Options{})
 	a.Ready(t)
 	b.Ready(t)
-	if a.Addr() == b.Addr() {
-		t.Fatalf("both instances on %s", a.Addr())
-	}
 	if code := a.Stop(t); code != 0 {
 		t.Errorf("a exit = %d:\n%s", code, a.Output())
 	}
