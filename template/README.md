@@ -40,7 +40,7 @@ Each task wraps a plain command, so the repository works without mise:
 |------|---------|--------------|
 | `mise run check` | build, vet, `gofmt -l`, `go fix -diff`, `go mod tidy -diff`, `go test -race`, `golangci-lint run` | The one read-only check, as CI runs it |
 | `mise run currency` | `bash scripts/currency.sh` | Report requirements, Go version, tools, and action pins behind their latest |
-| `mise run upgrade` | `go get <direct>@latest`, `go mod tidy`, `mise upgrade --bump --local` | Upgrade requirements and tools, rewriting `go.mod` and `mise.toml` |
+| `mise run upgrade` | `go mod edit -go=<current minor> -toolchain=none`, `go get <direct>@latest`, `go mod tidy`, `mise upgrade --bump --local` | Upgrade the go directive, requirements, and tools, rewriting `go.mod` and `mise.toml` |
 | `mise run build` | `go build ./...` | Build the module |
 | `mise run vet` | `go vet -tags integration ./...` | Compile-check and vet, the integration suite included |
 | `mise run serve` | `go run ./cmd/server` | Run the service locally |
