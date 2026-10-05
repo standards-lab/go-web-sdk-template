@@ -55,18 +55,24 @@ func TestConfig_FinalizeDefaults(t *testing.T) {
 
 // Every environment-variable name derives from the prefix Finalize receives —
 // in production, the one envPrefix const Load passes, the single place a
-// seeded service renames.
-func TestConfig_FinalizeSeedsEnvNamesFromPrefix(t *testing.T) {
+// seeded service renames — so a renamed prefix reads its own variables and
+// ignores the default namespace.
+func TestConfig_FinalizeReadsEnvUnderPrefix(t *testing.T) {
+	t.Setenv("SVC_LOG_LEVEL", "debug")
+	t.Setenv("SVC_SERVER_PORT", "9090")
+	t.Setenv("APP_LOG_LEVEL", "error")
+	t.Setenv("APP_SERVER_PORT", "7070")
+
 	cfg := &config.Config{}
-	if err := cfg.Finalize("app"); err != nil {
+	if err := cfg.Finalize("svc"); err != nil {
 		t.Fatalf("Finalize: %v", err)
 	}
 
-	if got := cfg.Log.Env.Level; got != "APP_LOG_LEVEL" {
-		t.Errorf("Log.Env.Level = %s, want APP_LOG_LEVEL", got)
+	if cfg.Log.Level != logging.LevelDebug {
+		t.Errorf("Log.Level = %s, want debug from SVC_LOG_LEVEL", cfg.Log.Level)
 	}
-	if got := cfg.Server.Env.Port; got != "APP_SERVER_PORT" {
-		t.Errorf("Server.Env.Port = %s, want APP_SERVER_PORT", got)
+	if cfg.Server.Port == nil || *cfg.Server.Port != 9090 {
+		t.Errorf("Server.Port = %v, want 9090 from SVC_SERVER_PORT", cfg.Server.Port)
 	}
 }
 
