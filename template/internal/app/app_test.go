@@ -12,9 +12,10 @@ import (
 	"time"
 
 	"github.com/standards-lab/go-web-sdk"
+	mw "github.com/standards-lab/go-web-sdk/middleware"
+
 	"github.com/standards-lab/go-web-sdk-template/template/internal/app"
 	"github.com/standards-lab/go-web-sdk-template/template/internal/config/configtest"
-	mw "github.com/standards-lab/go-web-sdk/middleware"
 )
 
 // failsafe bounds every wait for an event that should occur, so a broken

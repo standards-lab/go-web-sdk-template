@@ -4,6 +4,7 @@ import (
 	"log/slog"
 
 	"github.com/standards-lab/go-web-sdk"
+
 	"github.com/standards-lab/go-web-sdk-template/template/internal/config"
 )
 
