@@ -12,7 +12,7 @@ const (
 	// stageInfrastructure holds the connections everything else runs over,
 	// such as a database pool or an object store, each with its readiness
 	// check (infrastructure.go). The template registers nothing at this
-	// stage, so the row waits unused for the first service that does.
+	// stage; the constant stays unused until the first service registers here.
 	stageInfrastructure = 0 //nolint:unused // the first infrastructure service registers here
 
 	// stageRoot is the request edge: the server (app.go), which starts
