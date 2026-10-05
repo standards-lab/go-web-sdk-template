@@ -1,9 +1,33 @@
 [tools]
 go = "1.27.1"
 golangci-lint = "2.14.0"
+jq = "1.8.2"
 
 [env]
 APP_ENV = "local"
+# The service's Go modules, as directories; tasks run in each one.
+GO_MODULES = "."
+
+# check vets, fixes, and lints with the integration tag so the integration
+# suite compiles and lints too; it runs only the unit tier.
+[tasks.check]
+description = "Build, vet, format, fix, tidy, test, and lint every module; writes nothing"
+run = '''
+set -eu
+export GOWORK=off
+for mod in $GO_MODULES; do
+  echo "check: $mod"
+  cd "$MISE_PROJECT_ROOT/$mod"
+  go build ./...
+  go vet -tags integration ./...
+  unformatted=$(gofmt -l .)
+  if [ -n "$unformatted" ]; then echo "gofmt: unformatted files:"; echo "$unformatted"; exit 1; fi
+  go fix -tags integration -diff ./...
+  go mod tidy -diff
+  go test -race ./...
+  golangci-lint run --build-tags integration ./...
+done
+'''
 
 [tasks.build]
 description = "Build the module"
