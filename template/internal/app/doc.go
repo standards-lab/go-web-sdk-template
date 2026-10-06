@@ -31,6 +31,7 @@
 // Routes and reactors are the two ways the running process is entered: a
 // caller drives a route, and an occurrence the process receives or
 // discovers drives a reactor. Both take *Domain, and a reactor need not
-// call it; neither is a domain service itself. Extending the service means editing a layer file's body;
-// the signatures, cmd/server, and [App.Run] stay untouched.
+// call it; neither is a domain service itself. Extending the service means
+// editing a layer file's body; the signatures, cmd/server, and [App.Run]
+// stay untouched.
 package app
