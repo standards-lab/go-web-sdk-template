@@ -138,11 +138,11 @@ serves the empty `/admin` group on the API listener; before the first admin serv
 settle the mount's isolation — its own listener, authentication, and audit — because an
 administrative surface on the public port is exposed the moment it serves a route.
 
-A reactor is any entry point that runs for the process lifetime, driven by an occurrence (a
-subscription, an interval, a wake on demand) rather than a caller: a field on `Reactors`
+A reactor is an entry point that runs for the process lifetime, driven by an occurrence (a
+subscription, an interval, a wake on demand) rather than a caller. Each is a field on `Reactors`,
 constructed in `newReactors` (`internal/app/reactors.go`) and registered on the coordinator the
-same as an infrastructure service. It often dispatches each occurrence to a domain service call,
-but need not; a background worker the service runs is a reactor too.
+same as an infrastructure service. A reactor often dispatches each occurrence to a domain service
+call, but need not; a background worker the service runs is a reactor too.
 
 Middleware that applies to every route stacks in `middleware` (`internal/app/middleware.go`),
 outermost first. The template ships `RequestID`, `RequestLogger`, and `Recoverer`, in the chain
