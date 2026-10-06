@@ -6,7 +6,8 @@
 //     composed on;
 //   - admin.go: [Admin], the administrative services, and their /admin mount;
 //   - domain.go: [Domain], the domain services, and their /api mount;
-//   - reactors.go: [Reactors], the event-driven entry points;
+//   - reactors.go: [Reactors], the process-lifetime entry points an
+//     occurrence drives;
 //   - stages.go: the stage table every layer file registers from;
 //   - routes.go: the list of mounts;
 //   - middleware.go: the router-level middleware stack, outermost first.
@@ -27,9 +28,10 @@
 // hot start plus shutdown, delegated to the coordinator, and returns the
 // process exit code.
 //
-// Routes and reactors are the two ways a domain service enters the running
-// process: a caller drives a route, and an occurrence the process receives
-// or discovers drives a reactor. Both take *Domain; neither is a domain
-// service itself. Extending the service means editing a layer file's body;
-// the signatures, cmd/server, and [App.Run] stay untouched.
+// Routes and reactors are the two ways the running process is entered: a
+// caller drives a route, and an occurrence the process receives or
+// discovers drives a reactor. Both take *Domain, and a reactor need not
+// call it; neither is a domain service itself. Extending the service means
+// editing a layer file's body; the signatures, cmd/server, and [App.Run]
+// stay untouched.
 package app

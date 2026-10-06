@@ -4,11 +4,12 @@ import (
 	"github.com/standards-lab/go-core/lifecycle"
 )
 
-// Reactors composes the application's event-driven entry points: components
-// that watch a source of occurrences and dispatch each one to a domain
-// service call, the inbound counterpart to a route. The template ships it
-// empty; which reactors it runs, and what they watch, is the application
-// author's decision.
+// Reactors composes the application's reactors: the entry points that run
+// for the process lifetime, driven by an occurrence (a subscription, an
+// interval, a wake on demand) rather than a caller, the inbound counterpart
+// to a route. A reactor often dispatches each occurrence to a domain service
+// call, but need not. The template ships it empty; which reactors it runs,
+// and what drives them, is the application author's decision.
 type Reactors struct{}
 
 // newReactors constructs the reactors and registers each on lc. It takes

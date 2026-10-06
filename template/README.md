@@ -93,7 +93,7 @@ and those files are the build points:
 - `infrastructure.go` for the services the application composes on
 - `admin.go` for the administrative services
 - `domain.go` for the domain services
-- `reactors.go` for the event-driven entry points
+- `reactors.go` for the process-lifetime entry points an occurrence drives
 - `middleware.go` for the router-level middleware
 
 Each layer file constructs its layer and owns its mount; `routes.go` lists the mounts and does
@@ -138,9 +138,11 @@ serves the empty `/admin` group on the API listener; before the first admin serv
 settle the mount's isolation — its own listener, authentication, and audit — because an
 administrative surface on the public port is exposed the moment it serves a route.
 
-A reactor owns a transport connection and runs for the process lifetime: a field on `Reactors`
+A reactor is an entry point that runs for the process lifetime, driven by an occurrence (a
+subscription, an interval, a wake on demand) rather than a caller. Each is a field on `Reactors`,
 constructed in `newReactors` (`internal/app/reactors.go`) and registered on the coordinator the
-same as an infrastructure service, dispatching each occurrence to a domain service call.
+same as an infrastructure service. A reactor often dispatches each occurrence to a domain service
+call, but need not; a background worker the service runs is a reactor too.
 
 Middleware that applies to every route stacks in `middleware` (`internal/app/middleware.go`),
 outermost first. The template ships `RequestID`, `RequestLogger`, and `Recoverer`, in the chain

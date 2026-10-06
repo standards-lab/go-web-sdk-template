@@ -12,6 +12,9 @@ generated service starts its own changelog; this one records the template's.
 - golangci-lint's `testpackage` check fails on any white-box test file except `export_test.go`,
   which may only export a clock or probe hook; every test drives the exported API from `<pkg>_test`.
   A generated service inherits the rule.
+- The starter README and `internal/app` describe a reactor as any entry point that runs for the
+  process lifetime, driven by an occurrence (a subscription, an interval, a wake on demand); it
+  often dispatches to a domain service, but need not.
 
 ## [v0.11.0] - 2026-09-30
 
