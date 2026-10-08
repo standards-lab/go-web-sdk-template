@@ -2,10 +2,9 @@ package config
 
 import (
 	"fmt"
-	"os"
-	"time"
 
 	libconfig "github.com/standards-lab/go-core/config"
+	"github.com/standards-lab/go-core/lifecycle"
 	"github.com/standards-lab/go-core/logging"
 	"github.com/standards-lab/go-web-sdk"
 )
@@ -14,15 +13,17 @@ import (
 // APP_LOG_LEVEL); a seeded service renames its whole namespace here.
 const envPrefix = "app"
 
-const defaultShutdownTimeout = 10 * time.Second
-
 // Config is the service's root configuration: the library capability blocks
-// plus the service-owned read policy and shutdown timeout.
+// plus the service-owned read policy. It embeds the lifecycle Coordinator's
+// configuration by value and untagged, so its shutdown_timeout is a
+// top-level key and ShutdownTimeout a promoted field; Config.Config is that
+// lifecycle block, the one the composition root hands the Coordinator.
 type Config struct {
-	Log             logging.Config     `json:"log"`
-	Server          web.Config         `json:"server"`
-	Reads           ReadsConfig        `json:"reads"`
-	ShutdownTimeout libconfig.Duration `json:"shutdown_timeout"`
+	lifecycle.Config
+
+	Log    logging.Config `json:"log"`
+	Server web.Config     `json:"server"`
+	Reads  ReadsConfig    `json:"reads"`
 }
 
 // Merge overlays src's set fields onto the receiver, delegating each block
@@ -31,37 +32,24 @@ func (c *Config) Merge(src *Config) {
 	if src == nil {
 		return
 	}
-	if src.ShutdownTimeout != 0 {
-		c.ShutdownTimeout = src.ShutdownTimeout
-	}
+	c.Config.Merge(&src.Config)
 	c.Log.Merge(&src.Log)
 	c.Server.Merge(&src.Server)
 	c.Reads.Merge(&src.Reads)
 }
 
-// Finalize applies the root default, reads the root's own environment
-// override, validates, and finalizes each block under the same prefix. It
-// satisfies the config package's Load contract. An empty prefix composes
-// empty variable names, which read as no override, so it disables every
-// environment override; tests use this hermetic form. Finalize rejects a
-// non-positive shutdown timeout, since the lifecycle coordinator panics on
-// one.
+// Finalize finalizes each block under the same prefix, the lifecycle block
+// first, and validates. It satisfies the config package's Load contract.
+// The lifecycle block's error returns as it is, unlabelled, since it names
+// its own key or variable: it applies the 10s default shutdown timeout,
+// reads <PREFIX>_SHUTDOWN_TIMEOUT, and rejects a non-positive timeout, on
+// which the lifecycle coordinator panics. An empty prefix composes empty
+// variable names, which read as no override, so it disables every
+// environment override; tests use this hermetic form.
 func (c *Config) Finalize(envPrefix string) error {
-	if c.ShutdownTimeout == 0 {
-		c.ShutdownTimeout = libconfig.Duration(defaultShutdownTimeout)
+	if err := c.Config.Finalize(envPrefix); err != nil {
+		return err
 	}
-
-	name := libconfig.EnvName(envPrefix, "shutdown_timeout")
-	if v := os.Getenv(name); v != "" {
-		if err := c.ShutdownTimeout.Set(v); err != nil {
-			return fmt.Errorf("%s: %w", name, err)
-		}
-	}
-
-	if c.ShutdownTimeout <= 0 {
-		return fmt.Errorf("shutdown_timeout must be positive, got %s", c.ShutdownTimeout)
-	}
-
 	if err := c.Log.Finalize(envPrefix); err != nil {
 		return fmt.Errorf("log: %w", err)
 	}

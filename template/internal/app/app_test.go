@@ -84,10 +84,7 @@ type running struct {
 func start(t *testing.T, cfg *config.Config) *running {
 	t.Helper()
 	buf := &syncBuffer{}
-	a, err := app.New(cfg, buf)
-	if err != nil {
-		t.Fatalf("app.New: %v", err)
-	}
+	a := app.New(cfg, buf)
 	ctx, cancel := context.WithCancel(context.Background())
 	r := &running{log: buf, cancel: cancel, done: make(chan int, 1)}
 	go func() { r.done <- a.Run(ctx) }()
@@ -314,15 +311,12 @@ func TestRun_ShutdownBoundedByTimeout(t *testing.T) {
 	}
 }
 
-// A second Run cannot exist: the coordinator is single-use, and the exit
-// path reports rather than panics only for lifecycle errors — a re-run is a
-// programming error and propagates go-core's panic.
+// A second Run cannot exist: an App runs once, and the exit path reports
+// rather than panics only for lifecycle errors — a re-run is a programming
+// error and panics.
 func TestRun_TwicePanics(t *testing.T) {
 	buf := &syncBuffer{}
-	a, err := app.New(configtest.Config(t), buf)
-	if err != nil {
-		t.Fatalf("app.New: %v", err)
-	}
+	a := app.New(configtest.Config(t), buf)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()

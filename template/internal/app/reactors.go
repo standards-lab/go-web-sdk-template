@@ -1,26 +1,18 @@
 package app
 
 import (
-	"github.com/standards-lab/go-core/lifecycle"
+	"github.com/standards-lab/go-core/graph"
 )
 
-// Reactors composes the application's reactors: the entry points that run
-// for the process lifetime, driven by an occurrence (a subscription, an
+// defineReactors defines the reactors on g into n: the entry points that
+// run for the process lifetime, driven by an occurrence (a subscription, an
 // interval, a wake on demand) rather than a caller, the inbound counterpart
 // to a route. A reactor often dispatches each occurrence to a domain service
-// call, but need not. The template ships it empty; which reactors it runs,
-// and what drives them, is the application author's decision.
-type Reactors struct{}
-
-// newReactors constructs the reactors and registers each on lc. It takes
-// infra for the transport connections a reactor owns and dom for the domain
-// calls it dispatches to — the two halves a reactor joins. Each reactor owns
-// a connection and runs for the process lifetime, so it registers on the
-// coordinator the same as an infrastructure service.
-func newReactors(
-	infra *Infrastructure,
-	dom *Domain,
-	lc *lifecycle.Coordinator,
-) (*Reactors, error) {
-	return &Reactors{}, nil
-}
+// call, but need not. Each reactor is its own node, a lifecycle participant
+// whose constructor Uses the infrastructure nodes for the transport
+// connection it owns and the domain nodes it dispatches to, the two halves
+// a reactor joins. No node Uses a reactor, so each is appended to
+// n.Reactors, which Run builds as roots and the server orders itself after.
+// The template defines none; which reactors it runs, and what drives them,
+// is the application author's decision.
+func defineReactors(g *graph.Graph, n *Nodes) {}
