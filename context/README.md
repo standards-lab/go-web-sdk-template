@@ -15,8 +15,9 @@ Every capability below is built except the candidate directions, and the code an
 package's `doc.go` are authoritative for it.
 
 - **Runnable baseline**: the template ships the composition root `internal/app` (one file per
-  layer on go-core's staged coordinator), the `internal/config` root with its `reads` policy
-  block, the `cmd/server` entrypoint, the probes, the staged drain, and the suite.
+  layer, each defining its nodes on go-core's dependency graph, which go-core's lifecycle
+  Coordinator runs), the `internal/config` root with its `reads` policy block, the `cmd/server`
+  entrypoint, the probes, the drain in reverse layer order, and the suite.
   `internal/app/doc.go` and the template's README state the layout. The admin, domain, and
   reactor layers ship empty, because what they compose is the application author's decision,
   and the `/admin` group serves on the API listener until the application settles its isolation.

@@ -4,41 +4,31 @@ import (
 	"io"
 	"log/slog"
 
-	"github.com/standards-lab/go-core/lifecycle"
+	"github.com/standards-lab/go-core/graph"
 	"github.com/standards-lab/go-core/logging"
 
 	"github.com/standards-lab/go-web-sdk-template/template/internal/config"
 )
 
-// Infrastructure holds the services an application is composed on, one
-// concrete field per service: the logger in the template baseline; a
-// database pool, storage, or auth client as a service grows. A field either
-// exists or the build fails, so a wiring mistake surfaces at compile time;
-// roles sharing a type (a write pool and a read pool) are distinct fields,
-// distinguished by name. The struct stops at the composition root: the
-// layer files read its fields, and a domain package receives its
-// dependencies as constructor parameters, never the struct itself.
-type Infrastructure struct {
-	Logger *slog.Logger
+// defineInfrastructure defines the infrastructure nodes on g into n: the
+// configuration cfg, and the services the application is composed on,
+// built from it — the logger, written to w, in the template baseline; a
+// database pool, storage, or auth client as a service grows, each its own
+// node. It constructs nothing. A service whose value implements
+// lifecycle.Subsystem takes part in startup and shutdown through its own
+// methods, and its constructor opens nothing: connectivity belongs to its
+// Start, so a failed Build leaks no connections.
+func defineInfrastructure(g *graph.Graph, n *Nodes, cfg *config.Config, w io.Writer) {
+	n.Config = g.Define("config", func(*graph.Scope) (*config.Config, error) {
+		return cfg, nil
+	})
+	n.Logger = g.Define("logger", newLogger(n, w))
 }
 
-// newInfrastructure constructs the infrastructure services in one place, in
-// dependency order. Each service registers on lc where it is built, as a
-// lifecycle.Service at a stage from the stage table (stages.go), so a
-// service cannot exist without a startup, shutdown, or readiness
-// declaration. Construction opens nothing: connectivity belongs to a
-// service's Start hook, so a failed cold start leaks no connections.
-// lc goes unused today, because the template's one service, Logger, has no
-// lifecycle; it stays a parameter so the first service that needs one — a
-// database pool, for instance — registers here without a signature change.
-func newInfrastructure(
-	w io.Writer,
-	cfg *config.Config,
-	lc *lifecycle.Coordinator,
-) (*Infrastructure, error) {
-	logger := logging.New(w, cfg.Log)
-
-	return &Infrastructure{
-		Logger: logger,
-	}, nil
+// newLogger constructs the service's logger over w from the config node's
+// log block.
+func newLogger(n *Nodes, w io.Writer) func(*graph.Scope) (*slog.Logger, error) {
+	return func(s *graph.Scope) (*slog.Logger, error) {
+		return logging.New(w, s.Use(n.Config).Log), nil
+	}
 }
