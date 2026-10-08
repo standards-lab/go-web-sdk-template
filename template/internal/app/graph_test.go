@@ -1,7 +1,14 @@
 package app_test
 
 import (
+	"context"
+	"errors"
 	"io"
+	"log/slog"
+	"maps"
+	"regexp"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/standards-lab/go-core/graph"
@@ -19,7 +26,8 @@ import (
 // go-web-sdk's health and server tests, not here.
 
 // buildAsRun builds a's graph from the roots Run builds from, the config,
-// the logger, the server, and the reactors, plus extra.
+// the logger, the server, and the reactors, plus extra. TestGraph_
+// ServerAloneInTopLayer holds these roots to Run's by observing a real Run.
 func buildAsRun(t *testing.T, a *app.App, extra ...graph.Ref) *graph.System {
 	t.Helper()
 	n := a.Nodes()
@@ -52,7 +60,26 @@ func serverAloneOnTop(sys *graph.System, n app.Nodes) ([]graph.Dependency, bool)
 func TestGraph_ServerAloneInTopLayer(t *testing.T) {
 	t.Run("as defined", func(t *testing.T) {
 		a := app.New(configtest.Config(t), io.Discard)
+
+		// Run's own Build, observed, so the Build below inspects the nodes
+		// Run reaches rather than a set this test chose.
+		ran := map[string]bool{}
+		a.Graph().Observe(func(name string) { ran[name] = true })
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		if code := a.Run(ctx); code != 0 {
+			t.Fatalf("Run = %d, want 0", code)
+		}
+		ranNames := slices.Sorted(maps.Keys(ran))
+
 		sys := buildAsRun(t, a)
+		var built []string
+		for _, layer := range sys.Layers() {
+			built = append(built, names(layer)...)
+		}
+		if slices.Sort(built); !slices.Equal(built, ranNames) {
+			t.Fatalf("buildAsRun built %v, Run built %v; their roots differ", built, ranNames)
+		}
 		if top, ok := serverAloneOnTop(sys, a.Nodes()); !ok {
 			t.Errorf("top layer = %+v, want the server node alone", names(top))
 		}
@@ -78,4 +105,32 @@ func names(layer []graph.Dependency) []string {
 		out[i] = d.Name
 	}
 	return out
+}
+
+// A constructor's error fails Run's Build: Run returns 1 and logs the
+// failure, labelled with the failing node's name, through a logger of its
+// own, since the node that failed may be the logger itself. Nothing reports
+// ready.
+func TestRun_BuildFailureExitsOne(t *testing.T) {
+	var log syncBuffer
+	a := app.New(configtest.Config(t), &log)
+	a.Graph().Replace(a.Nodes().Logger, func(*graph.Scope) (*slog.Logger, error) {
+		return nil, errors.New("logger unavailable")
+	})
+
+	// Cancelled up front, so a Build that wrongly succeeds drains at once
+	// and fails the exit-code check instead of hanging.
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if code := a.Run(ctx); code != 1 {
+		t.Errorf("Run = %d, want 1", code)
+	}
+	out := log.String()
+	failure := regexp.MustCompile(`msg="service failed" error="[^"]*logger[^"]*logger unavailable`)
+	if !failure.MatchString(out) {
+		t.Errorf("log = %q, want a service failure naming the logger node and its error", out)
+	}
+	if strings.Contains(out, "server ready") {
+		t.Errorf("log = %q, want no ready record", out)
+	}
 }

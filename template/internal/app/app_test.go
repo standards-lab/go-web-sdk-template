@@ -311,9 +311,8 @@ func TestRun_ShutdownBoundedByTimeout(t *testing.T) {
 	}
 }
 
-// A second Run cannot exist: an App runs once, and the exit path reports
-// rather than panics only for lifecycle errors — a re-run is a programming
-// error and panics.
+// An App runs once. Run reports a Build or lifecycle failure as an exit
+// code, but a second Run is a programming error and panics.
 func TestRun_TwicePanics(t *testing.T) {
 	buf := &syncBuffer{}
 	a := app.New(configtest.Config(t), buf)
