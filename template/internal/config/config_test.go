@@ -98,15 +98,65 @@ func TestConfig_FinalizeEnvOverrides(t *testing.T) {
 }
 
 func TestConfig_FinalizeRejectsNonPositiveShutdownTimeout(t *testing.T) {
-	t.Setenv("APP_SHUTDOWN_TIMEOUT", "-5s")
+	for _, v := range []string{"-5s", "0s"} {
+		t.Run(v, func(t *testing.T) {
+			t.Setenv("APP_SHUTDOWN_TIMEOUT", v)
+
+			cfg := &config.Config{}
+			err := cfg.Finalize("app")
+			if err == nil {
+				t.Fatalf("Finalize accepted shutdown_timeout %s", v)
+			}
+			if !strings.Contains(err.Error(), "shutdown_timeout must be positive") {
+				t.Errorf("error = %v, want \"shutdown_timeout must be positive\"", err)
+			}
+		})
+	}
+}
+
+// A file's non-positive timeout fails the same check as the environment's.
+func TestConfig_FinalizeRejectsNonPositiveFileShutdownTimeout(t *testing.T) {
+	cfg := &config.Config{ShutdownTimeout: libconfig.Duration(-time.Second)}
+	err := cfg.Finalize("")
+	if err == nil || !strings.Contains(err.Error(), "shutdown_timeout must be positive") {
+		t.Errorf("Finalize = %v, want \"shutdown_timeout must be positive\"", err)
+	}
+}
+
+func TestConfig_FinalizeRejectsUnparsableShutdownTimeout(t *testing.T) {
+	t.Setenv("APP_SHUTDOWN_TIMEOUT", "soon")
 
 	cfg := &config.Config{}
 	err := cfg.Finalize("app")
 	if err == nil {
-		t.Fatal("Finalize accepted a negative shutdown_timeout")
+		t.Fatal("Finalize accepted an unparsable APP_SHUTDOWN_TIMEOUT")
 	}
-	if !strings.Contains(err.Error(), "shutdown_timeout") {
-		t.Errorf("error = %v, want it to name shutdown_timeout", err)
+	if !strings.Contains(err.Error(), "APP_SHUTDOWN_TIMEOUT") {
+		t.Errorf("error = %v, want it to name APP_SHUTDOWN_TIMEOUT", err)
+	}
+}
+
+// The empty prefix composes no variable name, so no environment value —
+// under the default namespace or none — overrides the timeout.
+func TestConfig_FinalizeEmptyPrefixReadsNoShutdownOverride(t *testing.T) {
+	t.Setenv("APP_SHUTDOWN_TIMEOUT", "30s")
+	t.Setenv("SHUTDOWN_TIMEOUT", "30s")
+
+	cfg := &config.Config{ShutdownTimeout: libconfig.Duration(3 * time.Second)}
+	if err := cfg.Finalize(""); err != nil {
+		t.Fatalf("Finalize: %v", err)
+	}
+	if got := cfg.ShutdownTimeout.Duration(); got != 3*time.Second {
+		t.Errorf("ShutdownTimeout = %s, want the configured 3s", got)
+	}
+}
+
+func TestConfig_MergeOverlayShutdownTimeoutReplacesBase(t *testing.T) {
+	base := &config.Config{ShutdownTimeout: libconfig.Duration(10 * time.Second)}
+	base.Merge(&config.Config{ShutdownTimeout: libconfig.Duration(3 * time.Second)})
+
+	if got := base.ShutdownTimeout.Duration(); got != 3*time.Second {
+		t.Errorf("ShutdownTimeout = %s, want the overlay's 3s", got)
 	}
 }
 

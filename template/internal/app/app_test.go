@@ -3,20 +3,31 @@ package app_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	libconfig "github.com/standards-lab/go-core/config"
 	"github.com/standards-lab/go-web-sdk"
 	mw "github.com/standards-lab/go-web-sdk/middleware"
 
 	"github.com/standards-lab/go-web-sdk-template/template/internal/app"
+	"github.com/standards-lab/go-web-sdk-template/template/internal/config"
 	"github.com/standards-lab/go-web-sdk-template/template/internal/config/configtest"
 )
+
+// These tests drive the composition root from outside: New builds it, Run
+// serves it, the log's ready record is the ready signal, and HTTP is the
+// only probe. They name no stage and no layer, so they hold the process's
+// behavior across a change to how New wires it.
 
 // failsafe bounds every wait for an event that should occur, so a broken
 // composition fails the test instead of hanging it.
@@ -41,23 +52,59 @@ func (b *syncBuffer) String() string {
 	return b.buf.String()
 }
 
-// waitForReady polls the log for the coordinator's ready record and returns
-// the address the server bound.
+// readyRecord matches the ready record's message and its addr attribute in
+// the text log format.
+var readyRecord = regexp.MustCompile(`msg="server ready" addr=(\S+)`)
+
+// waitForReady polls the log for the ready record and returns the address
+// it names.
 func waitForReady(t *testing.T, buf *syncBuffer) string {
 	t.Helper()
 	deadline := time.Now().Add(failsafe)
 	for time.Now().Before(deadline) {
-		if out := buf.String(); strings.Contains(out, "server ready") {
-			_, after, ok := strings.Cut(out, "addr=")
-			if !ok {
-				t.Fatalf("ready record carries no addr: %q", out)
-			}
-			return strings.Fields(after)[0]
+		if m := readyRecord.FindStringSubmatch(buf.String()); m != nil {
+			return m[1]
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
 	t.Fatalf("timed out waiting for the server to become ready; log: %q", buf.String())
 	return ""
+}
+
+// running is one App under Run: its log, the cancel that drains it, and the
+// channel Run's exit code arrives on.
+type running struct {
+	log    *syncBuffer
+	cancel context.CancelFunc
+	done   chan int
+}
+
+// start builds an App from cfg and runs it in the background. The cleanup
+// cancels it, so a test that fails early leaves no server behind.
+func start(t *testing.T, cfg *config.Config) *running {
+	t.Helper()
+	buf := &syncBuffer{}
+	a, err := app.New(cfg, buf)
+	if err != nil {
+		t.Fatalf("app.New: %v", err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	r := &running{log: buf, cancel: cancel, done: make(chan int, 1)}
+	go func() { r.done <- a.Run(ctx) }()
+	t.Cleanup(cancel)
+	return r
+}
+
+// exit waits for Run to return and gives its exit code.
+func (r *running) exit(t *testing.T) int {
+	t.Helper()
+	select {
+	case code := <-r.done:
+		return code
+	case <-time.After(failsafe):
+		t.Fatalf("timed out waiting for Run to return; log: %q", r.log.String())
+		return -1
+	}
 }
 
 // client disables keep-alives so no idle connection outlives its request and
@@ -80,63 +127,190 @@ func get(t *testing.T, addr, path string) (int, http.Header, string) {
 	return resp.StatusCode, resp.Header, string(body)
 }
 
-// The baseline composition end to end. New assembles the process from the
-// package's build points. Run serves the probes, and the readiness
-// aggregate reports the coordinator under the app's "lifecycle" name. The
-// request logger from the middleware stack records the traffic, and a
-// cancel drains to exit 0.
-//
-// The full serve-and-drain pass exists because the baseline's infrastructure
-// is inert: no subsystem opens a connection, so startup always succeeds.
-// When the first subsystem with a lifecycle arrives, this test gives way to
-// startup-contract tests — hermetic runs against a closed port asserting Run
-// exits 1, the startup failure names the subsystem, and the server never
-// reports ready.
-func TestRun_ServesProbesThenDrains(t *testing.T) {
-	buf := &syncBuffer{}
-	a, err := app.New(configtest.Config(t), buf)
-	if err != nil {
-		t.Fatalf("app.New: %v", err)
+// assertProbeHeaders pins the headers both probes answer with.
+func assertProbeHeaders(t *testing.T, path string, header http.Header) {
+	t.Helper()
+	if got := header.Get("Content-Type"); got != "application/json" {
+		t.Errorf("GET %s Content-Type = %q, want application/json", path, got)
 	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	done := make(chan int, 1)
-	go func() { done <- a.Run(ctx) }()
-
-	addr := waitForReady(t, buf)
-
-	code, header, _ := get(t, addr, web.HealthPath)
-	if code != http.StatusOK {
-		t.Errorf("GET %s = %d, want 200", web.HealthPath, code)
+	if got := header.Get("Cache-Control"); got != "no-store" {
+		t.Errorf("GET %s Cache-Control = %q, want no-store", path, got)
 	}
 	if header.Get(mw.RequestIDHeader) == "" {
-		t.Errorf("GET %s carries no %s response header; RequestID is not wired", web.HealthPath, mw.RequestIDHeader)
+		t.Errorf("GET %s carries no %s response header; RequestID is not wired", path, mw.RequestIDHeader)
 	}
+}
 
-	code, _, body := get(t, addr, web.ReadyPath)
-	if code != http.StatusOK {
+// The baseline composition end to end. New assembles the process from the
+// package's build points. Run serves the probes, the request logger from
+// the middleware stack records the traffic, and a cancel drains to exit 0
+// with the stop record.
+func TestRun_ServesProbesThenDrains(t *testing.T) {
+	r := start(t, configtest.Config(t))
+	addr := waitForReady(t, r.log)
+
+	if code, _, _ := get(t, addr, web.HealthPath); code != http.StatusOK {
+		t.Errorf("GET %s = %d, want 200", web.HealthPath, code)
+	}
+	if code, _, _ := get(t, addr, web.ReadyPath); code != http.StatusOK {
 		t.Errorf("GET %s = %d, want 200", web.ReadyPath, code)
 	}
-	if !strings.Contains(body, `"name":"lifecycle"`) {
-		t.Errorf("readiness body = %q, want the coordinator under the \"lifecycle\" name", body)
+
+	r.cancel()
+	if code := r.exit(t); code != 0 {
+		t.Errorf("Run = %d, want 0; log: %q", code, r.log.String())
 	}
 
-	cancel()
-	select {
-	case code := <-done:
-		if code != 0 {
-			t.Errorf("Run = %d, want 0", code)
-		}
-	case <-time.After(failsafe):
-		t.Fatal("timed out waiting for Run to return")
-	}
-
-	out := buf.String()
-	if !strings.Contains(out, "server stopped") {
+	out := r.log.String()
+	if !strings.Contains(out, `msg="server stopped"`) {
 		t.Error("log carries no stop record after the drain")
 	}
 	if !strings.Contains(out, "url.path="+web.HealthPath) {
 		t.Error("log has no probe request record; the middleware stack is not wired")
+	}
+}
+
+// The liveness probe's whole contract: 200, a JSON body of exactly
+// {"status":"ok"}, never cached, and stamped with a request ID.
+func TestRun_HealthzContract(t *testing.T) {
+	r := start(t, configtest.Config(t))
+	addr := waitForReady(t, r.log)
+
+	code, header, body := get(t, addr, web.HealthPath)
+	if code != http.StatusOK {
+		t.Errorf("GET %s = %d, want 200", web.HealthPath, code)
+	}
+	assertProbeHeaders(t, web.HealthPath, header)
+	if got := strings.TrimSpace(body); got != `{"status":"ok"}` {
+		t.Errorf("GET %s body = %q, want {\"status\":\"ok\"}", web.HealthPath, got)
+	}
+}
+
+// The readiness probe's whole contract: 200, status "ready", and exactly
+// one check, the lifecycle coordinator's, reporting ready. A second check
+// appearing, or the one being renamed, fails here.
+func TestRun_ReadyzContract(t *testing.T) {
+	r := start(t, configtest.Config(t))
+	addr := waitForReady(t, r.log)
+
+	code, header, body := get(t, addr, web.ReadyPath)
+	if code != http.StatusOK {
+		t.Errorf("GET %s = %d, want 200", web.ReadyPath, code)
+	}
+	assertProbeHeaders(t, web.ReadyPath, header)
+
+	type check struct {
+		Name  string `json:"name"`
+		Ready bool   `json:"ready"`
+	}
+	var got struct {
+		Status string  `json:"status"`
+		Checks []check `json:"checks"`
+	}
+	dec := json.NewDecoder(strings.NewReader(body))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&got); err != nil {
+		t.Fatalf("decode %s body %q: %v", web.ReadyPath, body, err)
+	}
+	if got.Status != "ready" {
+		t.Errorf("readiness status = %q, want ready", got.Status)
+	}
+	want := []check{{Name: "lifecycle", Ready: true}}
+	if len(got.Checks) != len(want) || got.Checks[0] != want[0] {
+		t.Errorf("readiness checks = %+v, want exactly %+v", got.Checks, want)
+	}
+}
+
+// The ready record fires once the server has bound, once, and names the
+// address it bound: the configured host with the kernel's port in place of
+// the requested 0. That address answers the readiness probe.
+func TestRun_ReadyRecordNamesBoundAddr(t *testing.T) {
+	r := start(t, configtest.Config(t))
+	addr := waitForReady(t, r.log)
+
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		t.Fatalf("ready addr %q: %v", addr, err)
+	}
+	if host != "127.0.0.1" {
+		t.Errorf("ready addr host = %q, want the configured 127.0.0.1", host)
+	}
+	if p, err := strconv.Atoi(port); err != nil || p == 0 {
+		t.Errorf("ready addr port = %q, want the bound nonzero port", port)
+	}
+	if code, _, _ := get(t, addr, web.ReadyPath); code != http.StatusOK {
+		t.Errorf("GET %s at the logged addr = %d, want 200", web.ReadyPath, code)
+	}
+	if n := len(readyRecord.FindAllString(r.log.String(), -1)); n != 1 {
+		t.Errorf("ready records = %d, want 1", n)
+	}
+}
+
+// A port another listener holds fails startup: Run returns 1, the failure
+// is logged as a startup error naming the server, and the server never
+// reports ready.
+func TestRun_TakenPortFailsStartup(t *testing.T) {
+	held, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("hold a port: %v", err)
+	}
+	defer func() { _ = held.Close() }()
+
+	cfg := configtest.Config(t)
+	cfg.Server.Port = new(held.Addr().(*net.TCPAddr).Port)
+
+	r := start(t, cfg)
+	if code := r.exit(t); code != 1 {
+		t.Errorf("Run = %d, want 1", code)
+	}
+
+	out := r.log.String()
+	failure := regexp.MustCompile(`msg="service failed" error="[^"]*startup:[^"]*server`)
+	if !failure.MatchString(out) {
+		t.Errorf("log = %q, want a startup error naming server", out)
+	}
+	if strings.Contains(out, "server ready") {
+		t.Errorf("log = %q, want no ready record", out)
+	}
+}
+
+// The shutdown timeout bounds the drain. A connection that has sent part
+// of a request is active, so a graceful drain would wait on it; past the
+// timeout Run gives up, returns 1, and does so promptly.
+func TestRun_ShutdownBoundedByTimeout(t *testing.T) {
+	const timeout = 200 * time.Millisecond
+	const margin = 500 * time.Millisecond
+
+	cfg := configtest.Config(t)
+	cfg.ShutdownTimeout = libconfig.Duration(timeout)
+
+	r := start(t, cfg)
+	addr := waitForReady(t, r.log)
+
+	conn, err := net.Dial("tcp", addr)
+	if err != nil {
+		t.Fatalf("dial %s: %v", addr, err)
+	}
+	defer func() { _ = conn.Close() }()
+	// An unterminated header block: the server reads it and waits for the
+	// rest, holding the connection active.
+	if _, err := io.WriteString(conn, "GET "+web.HealthPath+" HTTP/1.1\r\nHost: stall\r\n"); err != nil {
+		t.Fatalf("write partial request: %v", err)
+	}
+	// Give the server a moment to read the bytes and mark the connection
+	// active before the drain starts.
+	time.Sleep(50 * time.Millisecond)
+
+	began := time.Now()
+	r.cancel()
+	code := r.exit(t)
+	elapsed := time.Since(began)
+
+	if code != 1 {
+		t.Errorf("Run = %d, want 1 when the drain outlives the timeout; log: %q", code, r.log.String())
+	}
+	if elapsed > timeout+margin {
+		t.Errorf("Run returned after %s, want within %s of the %s timeout", elapsed, margin, timeout)
 	}
 }
 
