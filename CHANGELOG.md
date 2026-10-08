@@ -27,7 +27,8 @@ list them. Porting the composition root meets these:
   `Subsystem`, `ReadinessChecker`, `Monitored`) with no `lifecycle.Add`; a reactor is also a
   Build root, appended to `Nodes.Reactors`.
 - `New` describes the graph and cannot fail, so it returns `*App` alone; `Run` builds the graph
-  and reports a Build failure, a wiring mistake included, as the service failing.
+  and reports a constructor's error as the service failing; a wiring mistake panics during
+  Build.
 - `Config` embeds `lifecycle.Config` by value and untagged: `cfg.Config` is the lifecycle block
   the Coordinator takes, `shutdown_timeout` stays a top-level key, and `cfg.ShutdownTimeout` is
   the promoted field. A `Config` composite literal sets the timeout as the promoted key,

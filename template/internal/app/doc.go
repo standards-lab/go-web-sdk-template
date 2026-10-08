@@ -25,8 +25,9 @@
 // handles, so a caller can Observe or Replace a node before Run. [App.Run]
 // is the hot start plus shutdown: it builds the graph from the config, the
 // logger, the server, and each reactor as roots, hands the System to go-core's
-// lifecycle Coordinator, and returns the process exit code. A Build failure,
-// a wiring mistake included, is reported there as the service failing.
+// lifecycle Coordinator, and returns the process exit code. A constructor's
+// error is reported there as the service failing; a wiring mistake panics
+// during Build.
 //
 // What a node takes part in is inferred from its value's methods: a
 // lifecycle.Starter or Stopper is started or stopped, a Subsystem is both,
@@ -43,9 +44,9 @@
 //
 // Routes and reactors are the two ways the running process is entered: a
 // caller drives a route, and an occurrence the process receives or
-// discovers drives a reactor. Both read the domain nodes, and a reactor
-// need not; neither is a domain service itself. Extending the service means
-// defining a node in its layer's define function, and a reactor also
-// appends itself to Nodes.Reactors; the signatures, cmd/server, and
+// discovers drives a reactor. A route reads the domain nodes, and a
+// reactor may; neither is a domain service itself. Extending the service
+// means defining a node in its layer's define function, and appending a
+// reactor's node to Nodes.Reactors; the signatures, cmd/server, and
 // [App.Run] stay untouched.
 package app
