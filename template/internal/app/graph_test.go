@@ -23,7 +23,9 @@ import (
 // run time — startup in layer order, readiness held until every check
 // passes, the server's runtime error watched as Monitored, and the drain in
 // reverse layer order — is pinned in go-core's lifecycle tests and
-// go-web-sdk's health and server tests, not here.
+// go-web-sdk's health and server tests, not here. Unlike app_test.go, these
+// tests name nodes: they reach the graph through App.Graph and App.Nodes, as
+// does the Build-failure case, which substitutes a failing constructor.
 
 // buildAsRun builds a's graph from the roots Run builds from, the config,
 // the logger, the server, and the reactors, plus extra. TestGraph_
