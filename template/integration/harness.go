@@ -51,8 +51,8 @@ func Launch(t testing.TB, opts Options) *Service {
 
 // Ready waits until the service's liveness probe answers, failing the test
 // with the captured output if the process exits or the failsafe elapses
-// first. The server is the root lifecycle stage, so a live probe means
-// every stage beneath it started.
+// first. The server is alone in the top layer of the service's graph, so a
+// live probe means every node beneath it started.
 func (s *Service) Ready(t testing.TB) *Service {
 	t.Helper()
 	s.Await(t, "liveness", func() bool { return webtest.Live(s.URL()) })

@@ -26,8 +26,8 @@ import (
 
 // These tests drive the composition root from outside: New builds it, Run
 // serves it, the log's ready record is the ready signal, and HTTP is the
-// only probe. They name no stage and no layer, so they hold the process's
-// behavior across a change to how New wires it.
+// only probe. They name no node and no layer, so they hold the process's
+// behavior across a change to how New describes it.
 
 // failsafe bounds every wait for an event that should occur, so a broken
 // composition fails the test instead of hanging it.

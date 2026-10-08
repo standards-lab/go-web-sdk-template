@@ -6,13 +6,13 @@ runnable web service on [go-core](https://github.com/standards-lab/go-core) and
 
 - layered configuration: a base file, environment overlays, secret layers, and environment
   variables, in fixed precedence;
-- the cold/hot start lifecycle: constructed with no I/O, run under go-core's coordinator, and
-  drained in order on shutdown;
+- the cold/hot start lifecycle: described as go-core's dependency graph with no I/O, built and
+  run under go-core's lifecycle coordinator, and drained in reverse layer order on shutdown;
 - liveness and readiness probes on `/healthz` and `/readyz`, fed by the lifecycle coordinator
   and the services' named checks;
 - the composition root as one file per architecture layer (infrastructure, admin, domain,
-  reactors), each constructing its layer and owning its mount, with the stage table, the list
-  of mounts, and the middleware stack (request id, request logging, panic recovery) beside them.
+  reactors), each defining its layer's nodes and owning its mount, with the server, the list of
+  mounts, and the middleware stack (request id, request logging, panic recovery) beside them.
 
 New services are generated from it:
 

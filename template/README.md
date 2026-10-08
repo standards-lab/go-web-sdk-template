@@ -96,53 +96,60 @@ and those files are the build points:
 - `reactors.go` for the process-lifetime entry points an occurrence drives
 - `middleware.go` for the router-level middleware
 
-Each layer file constructs its layer and owns its mount; `routes.go` lists the mounts and does
-nothing else, and `stages.go` names every lifecycle stage the process uses. `cmd/server` is the
-entrypoint alone and never changes.
+Each layer file defines its layer's nodes on go-core's dependency graph, in its define function
+(`defineInfrastructure`, `defineAdmin`, `defineDomain`, `defineReactors`), and owns its mount;
+`server.go` defines the request edge (the readiness the probes report, the router, the server),
+and `routes.go` lists the mounts and does nothing else. The `Nodes` value holds one handle per
+node: each define function fills its part, and a constructor reads the lower layers' nodes from
+it with `Use`. `New` describes the graph and cannot fail; `Run` builds it and runs it under
+go-core's lifecycle Coordinator. `cmd/server` is the entrypoint alone and never changes.
 
 A domain service starts from its Entity:
 
 1. Give the Entity its own package under `domain/`.
 2. Expose its Queries and Commands as the domain service's methods.
 3. Build the layer's route group in its handler.
-4. Construct the service and mount the group in `domain.go`.
+4. Define the service's node in `defineDomain` and mount the group in `mountAPI` (`domain.go`).
 
-The constructor draws what it uses from the `Infrastructure` fields, and the handler is handed
-its policy from the config root at the construction site (`cfg.Reads.Limits()` for a collection
-read) and the service's logger for its error writer (`web.NewErrorWriter(logger, ...)`).
+The constructor draws what it uses from the infrastructure nodes it `Use`s, and the handler is
+handed its policy from the config node at the construction site (`cfg.Reads.Limits()` for a
+collection read) and the service's logger for its error writer (`web.NewErrorWriter(logger, ...)`).
 
 An infrastructure service (a database pool, a storage client, an auth client) is a field on
-`Infrastructure` plus its construction in `newInfrastructure` (`internal/app/infrastructure.go`):
-declare its lifecycle on the coordinator and set the field in the struct it returns —
+`Nodes` plus its node, defined in `defineInfrastructure` (`internal/app/infrastructure.go`) —
 
 ```go
-lc.Add(lifecycle.Service{Name: "database", Stage: stageInfrastructure, Start: db.Start, Shutdown: db.Shutdown, Check: db})
-
-return &Infrastructure{
-	Logger: logger,
-	DB:     db,
-}, nil
+n.DB = g.Define("database", func(s *graph.Scope) (*db.Pool, error) {
+	return db.New(s.Use(n.Config).DB, s.Use(n.Logger)), nil
+})
 ```
 
-A service registers at a stage named in the stage table (`internal/app/stages.go`), never at a
-number of its own; a new stage is a new row there. Stages start in ascending order ahead of the
-server's root stage and drain after it, so in-flight requests complete before their
-infrastructure closes. A service declared this way cannot be missing from the probe or the drain,
-and a field that does not exist fails the build at its access.
+Its part in the lifecycle is inferred from its value's methods, with no registration: a
+`lifecycle.Starter` is started and a `lifecycle.Stopper` shut down (a `Subsystem` is both), a
+`ReadinessChecker` joins `/readyz` under the node's name, and a `Monitored` has its runtime
+error watched. Its constructor opens nothing; connectivity belongs to its `Start`, so a failed
+build leaks no connections. Nodes start in layer order, each above the nodes it uses, and drain
+in reverse; the server is alone in the top layer, so it starts last and drains first, and
+in-flight requests complete before their infrastructure closes. A service defined this way
+cannot be missing from the probe or the drain, and a `Nodes` field that does not exist fails
+compilation at its access.
 
 An admin service administers one infrastructure service over the mechanisms its library
-provides, and is a field on `Admin` constructed in `newAdmin` (`internal/app/admin.go`) with its
-route group mounted under `/admin` in `mountAdmin`. It registers on the coordinator when it
-owns a lifecycle stage, ahead of the domains that depend on the state it corrects. The template
-serves the empty `/admin` group on the API listener; before the first admin service is mounted,
-settle the mount's isolation — its own listener, authentication, and audit — because an
-administrative surface on the public port is exposed the moment it serves a route.
+provides. It is a node defined in `defineAdmin` (`internal/app/admin.go`), with its route group
+mounted under `/admin` in `mountAdmin`. One that verifies and corrects the state of the
+infrastructure it administers is a lifecycle participant by its methods, and the domains that
+depend on that state `Use` it, so it starts ahead of them. The template serves the empty
+`/admin` group on the API listener; before the first admin service is mounted, settle the
+mount's isolation — its own listener, authentication, and audit — because an administrative
+surface on the public port is exposed the moment it serves a route.
 
 A reactor is an entry point that runs for the process lifetime, driven by an occurrence (a
-subscription, an interval, a wake on demand) rather than a caller. Each is a field on `Reactors`,
-constructed in `newReactors` (`internal/app/reactors.go`) and registered on the coordinator the
-same as an infrastructure service. A reactor often dispatches each occurrence to a domain service
-call, but need not; a background worker the service runs is a reactor too.
+subscription, an interval, a wake on demand) rather than a caller. Each is a node defined in
+`defineReactors` (`internal/app/reactors.go`), its lifecycle inferred the same as an
+infrastructure service's. No node uses a reactor, so it is a Build root: append it to
+`Nodes.Reactors`, which `Run` builds and the server orders itself after. A reactor often
+dispatches each occurrence to a domain service call, but need not; a background worker the
+service runs is a reactor too.
 
 Middleware that applies to every route stacks in `middleware` (`internal/app/middleware.go`),
 outermost first. The template ships `RequestID`, `RequestLogger`, and `Recoverer`, in the chain

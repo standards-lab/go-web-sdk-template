@@ -7,14 +7,68 @@ generated service starts its own changelog; this one records the template's.
 
 ## [Unreleased]
 
+## [v0.12.0] - 2026-10-08
+
+The composition root moves onto go-core's dependency graph: each layer file defines its nodes,
+`New` describes the graph, and `Run` builds it and hands the System to the lifecycle
+Coordinator, which infers each node's part in startup, readiness, monitoring, and shutdown from
+its value's methods. The module depends on `github.com/standards-lab/go-core v0.6.0` and
+`github.com/standards-lab/go-web-sdk v0.15.0`, and `mise.toml` pins Go 1.27.2.
+
+A generated service that ports this release also takes the libraries' own breaking changes since
+its previous pins; the [go-core](https://github.com/standards-lab/go-core/blob/main/CHANGELOG.md)
+and [go-web-sdk](https://github.com/standards-lab/go-web-sdk/blob/main/CHANGELOG.md) CHANGELOGs
+list them. Porting the composition root meets these:
+
+- The stage table and the layer structs give way to the `Nodes` value and one define function
+  per layer file (`defineInfrastructure`, `defineAdmin`, `defineDomain`, `defineReactors`, and
+  `defineServer` in the new `server.go`). A service is a node defined in its layer's define
+  function, its lifecycle part inferred from its value's methods (`Starter`, `Stopper`,
+  `Subsystem`, `ReadinessChecker`, `Monitored`) with no `lifecycle.Add`; a reactor is also a
+  Build root, appended to `Nodes.Reactors`.
+- `New` describes the graph and cannot fail, so it returns `*App` alone; `Run` builds the graph
+  and reports a Build failure, a wiring mistake included, as the service failing.
+- `Config` embeds `lifecycle.Config` by value and untagged: `cfg.Config` is the lifecycle block
+  the Coordinator takes, `shutdown_timeout` stays a top-level key, and `cfg.ShutdownTimeout` is
+  the promoted field. A `Config` composite literal sets the timeout under the embedded field,
+  `Config: lifecycle.Config{ShutdownTimeout: ...}`.
+- `web.RegisterHealth` takes the readiness node's value, a `*lifecycle.Readiness` the
+  Coordinator binds after the Build, in place of the Coordinator.
+- `lc.Monitor(server.Err())` is dropped: the server's value is inferred `Monitored`, and a
+  second registration would watch it twice.
+- `/readyz` lists the nodes' checks after `lifecycle` in layer, then definition, order.
+
+### Added
+
+- `App.Graph` and `App.Nodes` publish the graph `New` described and a handle on each node, so a
+  caller can `Observe` or `Replace` a node before `Run`.
+- A test pins that the server is alone in the top layer of the graph `Run` builds. Startup
+  order, readiness held until every check passes, the monitored runtime error, and the reverse
+  drain are pinned in go-core's lifecycle tests and go-web-sdk's health and server tests.
+
 ### Changed
 
+- **Breaking:** the go-core pin moves to v0.6.0 (from v0.5.0) and the go-web-sdk pin to v0.15.0
+  (from v0.14.0); Go moves to 1.27.2.
+- **Breaking** for a service that ports it: the composition root is described on go-core's graph,
+  as the list above states. The server orders itself after every reactor, so it starts last and
+  drains first.
+- `internal/config` drops its own shutdown-timeout default and environment read; the embedded
+  `lifecycle.Config` applies the 10s default, reads `APP_SHUTDOWN_TIMEOUT`, and rejects a
+  non-positive timeout.
+- The starter README, the README, and the package comments describe the graph layout in place
+  of the stage table.
 - golangci-lint's `testpackage` check fails on any white-box test file except `export_test.go`,
   which may only export a clock or probe hook; every test drives the exported API from `<pkg>_test`.
   A generated service inherits the rule.
 - The starter README and `internal/app` describe a reactor as any entry point that runs for the
   process lifetime, driven by an occurrence (a subscription, an interval, a wake on demand); it
   often dispatches to a domain service, but need not.
+
+### Removed
+
+- `internal/app/stages.go` and its stage table, and the `Infrastructure`, `Admin`, `Domain`, and
+  `Reactors` layer structs with their constructors.
 
 ## [v0.11.0] - 2026-09-30
 
@@ -305,7 +359,8 @@ depends on `github.com/standards-lab/go-core v0.1.0` and
   copies the subtree as a running service; the starter README carries the after-generation
   identity steps.
 
-[Unreleased]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.11.0...HEAD
+[Unreleased]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.12.0...HEAD
+[v0.12.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.11.0...template/v0.12.0
 [v0.11.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.10.0...template/v0.11.0
 [v0.10.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.9.0...template/v0.10.0
 [v0.9.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.8.0...template/v0.9.0
