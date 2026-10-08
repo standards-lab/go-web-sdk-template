@@ -30,8 +30,8 @@ list them. Porting the composition root meets these:
   and reports a Build failure, a wiring mistake included, as the service failing.
 - `Config` embeds `lifecycle.Config` by value and untagged: `cfg.Config` is the lifecycle block
   the Coordinator takes, `shutdown_timeout` stays a top-level key, and `cfg.ShutdownTimeout` is
-  the promoted field. A `Config` composite literal sets the timeout under the embedded field,
-  `Config: lifecycle.Config{ShutdownTimeout: ...}`.
+  the promoted field. A `Config` composite literal sets the timeout as the promoted key,
+  `config.Config{ShutdownTimeout: ...}` (Go 1.27); `go fix` rewrites the nested form.
 - `web.RegisterHealth` takes the readiness node's value, a `*lifecycle.Readiness` the
   Coordinator binds after the Build, in place of the Coordinator.
 - `lc.Monitor(server.Err())` is dropped: the server's value is inferred `Monitored`, and a
