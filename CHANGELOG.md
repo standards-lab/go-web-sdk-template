@@ -12,8 +12,8 @@ generated service starts its own changelog; this one records the template's.
 ### Changed
 
 - The go-core pin moves to v0.7.0 (from v0.6.0) and the go-web-sdk pin to v0.15.1 (from
-  v0.15.0). The logger `logging.New` builds writes each record's time in UTC, whatever the host's
-  zone. The template returns and emits no other time, and its wiring is unchanged.
+  v0.15.0). The logger `logging.New` builds writes each record's time in `time.UTC`, whatever
+  `time.Local` is. The template returns and emits no other time, and its wiring is unchanged.
 
 ## [v0.12.0] - 2026-10-08
 
