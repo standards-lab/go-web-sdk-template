@@ -7,6 +7,14 @@ generated service starts its own changelog; this one records the template's.
 
 ## [Unreleased]
 
+## [v0.12.1] - 2026-10-09
+
+### Changed
+
+- The go-core pin moves to v0.7.0 (from v0.6.0) and the go-web-sdk pin to v0.15.1 (from
+  v0.15.0). The logger `logging.New` builds writes each record's time in UTC, whatever the host's
+  zone. The template returns and emits no other time, and its wiring is unchanged.
+
 ## [v0.12.0] - 2026-10-08
 
 The composition root moves onto go-core's dependency graph: each layer file defines its nodes,
@@ -360,7 +368,8 @@ depends on `github.com/standards-lab/go-core v0.1.0` and
   copies the subtree as a running service; the starter README carries the after-generation
   identity steps.
 
-[Unreleased]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.12.0...HEAD
+[Unreleased]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.12.1...HEAD
+[v0.12.1]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.12.0...template/v0.12.1
 [v0.12.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.11.0...template/v0.12.0
 [v0.11.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.10.0...template/v0.11.0
 [v0.10.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.9.0...template/v0.10.0
