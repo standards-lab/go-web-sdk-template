@@ -7,24 +7,47 @@ generated service starts its own changelog; this one records the template's.
 
 ## [Unreleased]
 
+## [v0.13.0] - 2026-10-14
+
+The template moves onto go-core v0.10.0, whose readiness checks narrow to started values and
+whose `reactor` package gives the reactor layer its primitive. The module depends on
+`github.com/standards-lab/go-core v0.10.0` and `github.com/standards-lab/go-web-sdk v0.15.2`.
+
+A generated service that ports this release from v0.12.1 also takes the libraries' own changes
+since its previous pins; the [go-core](https://github.com/standards-lab/go-core/blob/main/CHANGELOG.md)
+and [go-web-sdk](https://github.com/standards-lab/go-web-sdk/blob/main/CHANGELOG.md) CHANGELOGs
+list them. Porting meets these:
+
+- A node joins `/readyz` only when its value is a `lifecycle.ReadyStarter`, a `Starter` that
+  also implements `Ready`. A value with `Ready` but no `Start` joins no check and drops out of
+  `/readyz` silently. Check each node whose readiness the service relies on, and give any such
+  value without a `Start` one, making it a `ReadyStarter`.
+- A reactor is built on go-core's `reactor` package: a node whose value is a `reactor.Reactor`,
+  built by `reactor.New` over `reactor.Every` or `reactor.Wake` with `reactor.CancelWithin`, and
+  appended to `Nodes.Reactors`.
+- `.golangci.yml` allows `export_test.go` a reactor hook beside a clock or probe hook; the
+  service inherits the widened rule.
+
+### Added
+
+- `TestGraph_ServerAboveReactor` pins the server above every reactor: it adds a fixture reactor
+  ordered after the router and holds the server alone in the top layer above it. The fixture
+  comes through `AppendReactor`, a hook in `internal/app/export_test.go`.
+
 ### Changed
 
-- The go-core pin moves to v0.10.0 (from v0.7.0), the go-web-sdk pin to v0.15.2 (from v0.15.1),
-  and the CI's `jdx/mise-action` pin to v5.1.2 (from v5.1.1). The composition root is unchanged.
-- The documentation of readiness follows go-core v0.8.0: a node joins `/readyz` only when its
-  value is a `lifecycle.ReadyStarter`, a `Starter` that also implements `Ready`; a value with
-  `Ready` but no `Start` joins no check. `internal/app/doc.go` and the README said any
-  `ReadinessChecker` joined.
-- The reactor layer's documentation names go-core's `reactor` package as its primitive: a
-  reactor is a node whose value is a `reactor.Reactor`, built by `reactor.New` over
-  `reactor.Every` or `reactor.Wake` with `reactor.CancelWithin`, and appended to
-  `Nodes.Reactors`. `defineReactors`, `internal/app/doc.go`, and the README say so, the README
-  with a snippet; the template still defines no reactor.
-- A test pins the server above every reactor: `TestGraph_ServerAboveReactor` adds a fixture
-  reactor ordered after the router and holds the server alone in the top layer above it. The
-  fixture comes through `AppendReactor`, a hook in `internal/app/export_test.go`, so
-  `.golangci.yml` now allows that one white-box file a reactor hook beside a clock or probe
-  hook. A generated service's exported API is unchanged.
+- **Breaking:** the go-core pin moves to v0.10.0 (from v0.7.0), the go-web-sdk pin to v0.15.2
+  (from v0.15.1), and the CI's `jdx/mise-action` pin to v5.1.2 (from v5.1.1). The composition
+  root is unchanged.
+- **Breaking** for a service that ports it: go-core v0.8.0 narrows readiness, as the list above
+  states. `internal/app/doc.go` and the README, which said any `ReadinessChecker` joined, now
+  say a node joins `/readyz` only as a `ReadyStarter`.
+- The reactor layer's documentation names go-core's `reactor` package as its primitive.
+  `defineReactors`, `internal/app/doc.go`, and the README say so, the README with a snippet; the
+  template still defines no reactor.
+- golangci-lint's `testpackage` rule lets `export_test.go` export a reactor hook beside a clock
+  or probe hook, for `AppendReactor`. A generated service inherits the rule; its exported API is
+  unchanged.
 
 ## [v0.12.1] - 2026-10-09
 
@@ -387,7 +410,8 @@ depends on `github.com/standards-lab/go-core v0.1.0` and
   copies the subtree as a running service; the starter README carries the after-generation
   identity steps.
 
-[Unreleased]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.12.1...HEAD
+[Unreleased]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.13.0...HEAD
+[v0.13.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.12.1...template/v0.13.0
 [v0.12.1]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.12.0...template/v0.12.1
 [v0.12.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.11.0...template/v0.12.0
 [v0.11.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.10.0...template/v0.11.0
