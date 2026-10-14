@@ -10,8 +10,10 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/standards-lab/go-core/graph"
+	"github.com/standards-lab/go-core/reactor"
 	"github.com/standards-lab/go-web-sdk"
 
 	"github.com/standards-lab/go-web-sdk-template/template/internal/app"
@@ -98,6 +100,60 @@ func TestGraph_ServerAloneInTopLayer(t *testing.T) {
 			t.Errorf("top layer = %+v, reported the server alone with a node above it", names(top))
 		}
 	})
+}
+
+// A reactor is reached by no Use, so Run builds it as a root, and the
+// server orders itself after each reactor, so the server stays alone in the
+// top layer above it. The template defines no reactor, so the fixture is
+// added through the test-only AppendReactor hook. It orders itself after the
+// router, which puts it in the server's layer unless the server orders
+// itself after it; a fixture lower in the graph would sit below the server
+// regardless, and the test could not fail. Its interval is an hour, so it
+// never ticks while the test runs.
+func TestGraph_ServerAboveReactor(t *testing.T) {
+	a := app.New(configtest.Config(t), io.Discard)
+	n := a.Nodes()
+	fixture := a.Graph().Define("fixture", func(s *graph.Scope) (*reactor.Reactor[time.Time], error) {
+		s.After(n.Router)
+		return reactor.New(reactor.Every(time.Hour), func(context.Context, time.Time) error {
+			return nil
+		}), nil
+	})
+	app.AppendReactor(a, fixture)
+
+	// Run's own Build, observed, shows Run builds the reactor as a root:
+	// no node Uses it, so nothing else would reach it. The context ends
+	// before startup, so the Run starts nothing.
+	ran := map[string]bool{}
+	a.Graph().Observe(func(name string) { ran[name] = true })
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if code := a.Run(ctx); code != 0 {
+		t.Fatalf("Run = %d, want 0", code)
+	}
+	if !ran[fixture.Name()] {
+		t.Fatalf("Run built %v, want the reactor %q among them", slices.Sorted(maps.Keys(ran)), fixture.Name())
+	}
+
+	sys := buildAsRun(t, a)
+	if top, ok := serverAloneOnTop(sys, a.Nodes()); !ok {
+		t.Errorf("top layer = %+v, want the server node alone above the reactor", names(top))
+	}
+	if r, s := layerOf(sys, fixture.Name()), layerOf(sys, n.Server.Name()); r < 0 || r >= s {
+		t.Errorf("reactor in layer %d, server in layer %d; want the reactor below the server", r, s)
+	}
+}
+
+// layerOf returns the index of the layer holding the node named name, or -1.
+func layerOf(sys *graph.System, name string) int {
+	for i, layer := range sys.Layers() {
+		for _, d := range layer {
+			if d.Name == name {
+				return i
+			}
+		}
+	}
+	return -1
 }
 
 // names lists the layer's node names.

@@ -10,7 +10,8 @@
 //     mount;
 //   - domain.go: defineDomain, the domain services, and their /api mount;
 //   - reactors.go: defineReactors, the process-lifetime entry points an
-//     occurrence drives;
+//     occurrence drives, each a node whose value is a go-core
+//     reactor.Reactor;
 //   - server.go: defineServer, the request edge: the readiness the probes
 //     report, the router, and the server;
 //   - routes.go: the list of mounts;
@@ -30,17 +31,19 @@
 // during Build.
 //
 // What a node takes part in is inferred from its value's methods: a
-// lifecycle.Starter or Stopper is started or stopped, a Subsystem is both,
-// a ReadinessChecker joins the readiness probe, and a Monitored has its
-// runtime error watched. Nodes start in layer order and drain in reverse.
-// The server orders itself after every reactor, so it is alone in the top
-// layer: it starts after every other node and drains first, so in-flight
-// requests complete before what they run on closes. The service's logger
-// reaches the server, the middleware, and every mount's error writer. The
-// probes register on the router's native mux, outside every module's
-// middleware, query live on every request through the readiness node's
-// value, and report the Coordinator's status under the "lifecycle" name,
-// ahead of the nodes' own checks in layer, then definition, order.
+// lifecycle.Starter or Stopper is started or stopped, a Subsystem is both, a
+// ReadyStarter (a Starter that also implements Ready) joins the readiness
+// probe, and a Monitored has its runtime error watched. A value with Ready
+// but no Start joins no readiness check. Nodes start in layer order and
+// drain in reverse. The server orders itself after every reactor, so it is
+// alone in the top layer: it starts after every other node and drains first,
+// so in-flight requests complete before what they run on closes. The
+// service's logger reaches the server, the middleware, and every mount's
+// error writer. The probes register on the router's native mux, outside
+// every module's middleware, query live on every request through the
+// readiness node's value, and report the Coordinator's status under the
+// "lifecycle" name, ahead of the nodes' own checks in layer, then
+// definition, order.
 //
 // Routes and reactors are the two ways the running process is entered: a
 // caller drives a route, and an occurrence the process receives or

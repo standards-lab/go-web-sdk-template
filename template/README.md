@@ -126,13 +126,14 @@ n.DB = g.Define("database", func(s *graph.Scope) (*db.Pool, error) {
 
 Its part in the lifecycle is inferred from its value's methods, with no registration: a
 `lifecycle.Starter` is started and a `lifecycle.Stopper` shut down (a `Subsystem` is both), a
-`ReadinessChecker` joins `/readyz` under the node's name, and a `Monitored` has its runtime
-error watched. Its constructor opens nothing; connectivity belongs to its `Start`, so a failed
-build leaks no connections. Nodes start in layer order, each in a layer above the nodes it uses,
-and drain in reverse; the server is alone in the top layer, so it starts last and drains first, and
-in-flight requests complete before their infrastructure closes. A service defined this way
-cannot be missing from the probe or the drain, and a `Nodes` field that does not exist fails
-compilation at its access.
+`lifecycle.ReadyStarter` (a `Starter` that also implements `Ready`) joins `/readyz` under the node's
+name, and a `Monitored` has its runtime error watched. A value with `Ready` but no `Start` joins no
+`/readyz` check. Its constructor opens nothing; connectivity belongs to its `Start`, so a failed
+build leaks no connections. Nodes start in layer order, each in a layer above the nodes it uses, and
+drain in reverse; the server is alone in the top layer, so it starts last and drains first, and
+in-flight requests complete before their infrastructure closes. A service defined this way cannot be
+missing from the probe or the drain, and a `Nodes` field that does not exist fails compilation at
+its access.
 
 An admin service administers one infrastructure service over the mechanisms its library
 provides. It is a node defined in `defineAdmin` (`internal/app/admin.go`), with its route group
@@ -145,11 +146,26 @@ surface on the public port is exposed the moment it serves a route.
 
 A reactor is an entry point that runs for the process lifetime, driven by an occurrence (a
 subscription, an interval, a wake on demand) rather than a caller. Each is a node defined in
-`defineReactors` (`internal/app/reactors.go`), its lifecycle inferred the same as an
-infrastructure service's. No node uses a reactor, so it is a Build root: append it to
-`Nodes.Reactors`, which `Run` builds and the server orders itself after. A reactor often
-dispatches each occurrence to a domain service call, but need not; a background worker the
-service runs is a reactor too.
+`defineReactors` (`internal/app/reactors.go`), whose value is a go-core `reactor.Reactor`.
+`reactor.New` builds one over a Source and a handler; the Source is `reactor.Every` for a plain
+interval, or `reactor.Wake` for an interval a nudge can also trigger. The `reactor.CancelWithin`
+option derives from the shutdown timeout how long the reactor's drain lets the handling in flight
+run before it cancels it. No node uses a reactor, so it is a Build root: append it to
+`Nodes.Reactors`, which `Run` builds and the server orders itself after. A reactor that expires
+sessions every minute is defined this way:
+
+```go
+n.Expiry = g.Define("expiry", func(s *graph.Scope) (*reactor.Reactor[time.Time], error) {
+	return reactor.New(reactor.Every(time.Minute), s.Use(n.Sessions).Expire,
+		reactor.CancelWithin(s.Use(n.Config).ShutdownTimeout.Duration())), nil
+})
+n.Reactors = append(n.Reactors, n.Expiry)
+```
+
+Its lifecycle is inferred the same as an infrastructure service's: the Coordinator starts it,
+drains it, reports its readiness under the node's name, and ends the run on its failure, with no
+registration. A reactor often dispatches each occurrence to a domain service call, but need not;
+a background worker the service runs is a reactor too.
 
 Middleware that applies to every route stacks in `middleware` (`internal/app/middleware.go`),
 outermost first. The template ships `RequestID`, `RequestLogger`, and `Recoverer`, in the chain
