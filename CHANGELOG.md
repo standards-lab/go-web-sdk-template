@@ -20,6 +20,11 @@ generated service starts its own changelog; this one records the template's.
   `reactor.Every` or `reactor.Wake` with `reactor.CancelWithin`, and appended to
   `Nodes.Reactors`. `defineReactors`, `internal/app/doc.go`, and the README say so, the README
   with a snippet; the template still defines no reactor.
+- A test pins the server above every reactor: `TestGraph_ServerAboveReactor` adds a fixture
+  reactor ordered after the router and holds the server alone in the top layer above it. The
+  fixture comes through `AppendReactor`, a hook in `internal/app/export_test.go`, so
+  `.golangci.yml` now allows that one white-box file a reactor hook beside a clock or probe
+  hook. A generated service's exported API is unchanged.
 
 ## [v0.12.1] - 2026-10-09
 
