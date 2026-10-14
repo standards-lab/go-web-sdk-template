@@ -7,6 +7,15 @@ generated service starts its own changelog; this one records the template's.
 
 ## [Unreleased]
 
+### Changed
+
+- The go-core pin moves to v0.10.0 (from v0.7.0), the go-web-sdk pin to v0.15.2 (from v0.15.1),
+  and the CI's `jdx/mise-action` pin to v5.1.2 (from v5.1.1). The composition root is unchanged.
+- The documentation of readiness follows go-core v0.8.0: a node joins `/readyz` only when its
+  value is a `lifecycle.ReadyStarter`, a `Starter` that also implements `Ready`; a value with
+  `Ready` but no `Start` joins no check. `internal/app/doc.go` and the README said any
+  `ReadinessChecker` joined.
+
 ## [v0.12.1] - 2026-10-09
 
 ### Changed

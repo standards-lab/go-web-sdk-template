@@ -31,8 +31,9 @@
 //
 // What a node takes part in is inferred from its value's methods: a
 // lifecycle.Starter or Stopper is started or stopped, a Subsystem is both,
-// a ReadinessChecker joins the readiness probe, and a Monitored has its
-// runtime error watched. Nodes start in layer order and drain in reverse.
+// a ReadyStarter (a Starter that also implements Ready) joins the readiness
+// probe, and a Monitored has its runtime error watched. A value with Ready
+// but no Start joins no readiness check. Nodes start in layer order and drain in reverse.
 // The server orders itself after every reactor, so it is alone in the top
 // layer: it starts after every other node and drains first, so in-flight
 // requests complete before what they run on closes. The service's logger

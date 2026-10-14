@@ -126,8 +126,9 @@ n.DB = g.Define("database", func(s *graph.Scope) (*db.Pool, error) {
 
 Its part in the lifecycle is inferred from its value's methods, with no registration: a
 `lifecycle.Starter` is started and a `lifecycle.Stopper` shut down (a `Subsystem` is both), a
-`ReadinessChecker` joins `/readyz` under the node's name, and a `Monitored` has its runtime
-error watched. Its constructor opens nothing; connectivity belongs to its `Start`, so a failed
+`lifecycle.ReadyStarter` (a `Starter` that also implements `Ready`) joins `/readyz` under the
+node's name, and a `Monitored` has its runtime error watched. A value with `Ready` but no `Start`
+joins no `/readyz` check. Its constructor opens nothing; connectivity belongs to its `Start`, so a failed
 build leaks no connections. Nodes start in layer order, each in a layer above the nodes it uses,
 and drain in reverse; the server is alone in the top layer, so it starts last and drains first, and
 in-flight requests complete before their infrastructure closes. A service defined this way
