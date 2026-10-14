@@ -146,11 +146,25 @@ surface on the public port is exposed the moment it serves a route.
 
 A reactor is an entry point that runs for the process lifetime, driven by an occurrence (a
 subscription, an interval, a wake on demand) rather than a caller. Each is a node defined in
-`defineReactors` (`internal/app/reactors.go`), its lifecycle inferred the same as an
-infrastructure service's. No node uses a reactor, so it is a Build root: append it to
-`Nodes.Reactors`, which `Run` builds and the server orders itself after. A reactor often
-dispatches each occurrence to a domain service call, but need not; a background worker the
-service runs is a reactor too.
+`defineReactors` (`internal/app/reactors.go`), whose value is a go-core `reactor.Reactor`:
+`reactor.New` over a Source (`reactor.Every` for a plain interval, `reactor.Wake` for an interval
+a nudge can also trigger) and a handler, with `reactor.CancelWithin` deriving from the shutdown
+timeout how long its drain lets the handling in flight run before it cancels it. No node uses a
+reactor, so it is a Build root: append it to `Nodes.Reactors`, which `Run` builds and the server
+orders itself after —
+
+```go
+n.Expiry = g.Define("expiry", func(s *graph.Scope) (*reactor.Reactor[time.Time], error) {
+	return reactor.New(reactor.Every(time.Minute), s.Use(n.Sessions).Expire,
+		reactor.CancelWithin(s.Use(n.Config).ShutdownTimeout.Duration())), nil
+})
+n.Reactors = append(n.Reactors, n.Expiry)
+```
+
+Its lifecycle is inferred the same as an infrastructure service's: the Coordinator starts it,
+drains it, reports its readiness under the node's name, and ends the run on its failure, with no
+registration. A reactor often dispatches each occurrence to a domain service call, but need not;
+a background worker the service runs is a reactor too.
 
 Middleware that applies to every route stacks in `middleware` (`internal/app/middleware.go`),
 outermost first. The template ships `RequestID`, `RequestLogger`, and `Recoverer`, in the chain

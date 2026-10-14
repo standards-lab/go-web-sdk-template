@@ -15,6 +15,11 @@ generated service starts its own changelog; this one records the template's.
   value is a `lifecycle.ReadyStarter`, a `Starter` that also implements `Ready`; a value with
   `Ready` but no `Start` joins no check. `internal/app/doc.go` and the README said any
   `ReadinessChecker` joined.
+- The reactor layer's documentation names go-core's `reactor` package as its primitive: a
+  reactor is a node whose value is a `reactor.Reactor`, built by `reactor.New` over
+  `reactor.Every` or `reactor.Wake` with `reactor.CancelWithin`, and appended to
+  `Nodes.Reactors`. `defineReactors`, `internal/app/doc.go`, and the README say so, the README
+  with a snippet; the template still defines no reactor.
 
 ## [v0.12.1] - 2026-10-09
 

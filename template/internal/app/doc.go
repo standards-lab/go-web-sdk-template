@@ -10,7 +10,8 @@
 //     mount;
 //   - domain.go: defineDomain, the domain services, and their /api mount;
 //   - reactors.go: defineReactors, the process-lifetime entry points an
-//     occurrence drives;
+//     occurrence drives, each a node whose value is a go-core
+//     reactor.Reactor;
 //   - server.go: defineServer, the request edge: the readiness the probes
 //     report, the router, and the server;
 //   - routes.go: the list of mounts;
