@@ -3,10 +3,12 @@ package app_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"regexp"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -20,15 +22,22 @@ import (
 )
 
 // This file pins the graph's structural properties the composition root
-// owns: each Nodes field names its node, and the server is alone in the top
-// layer over the root set App.Roots publishes, which it first holds to what
-// a real Run builds. What that position buys at
-// run time — startup in layer order, readiness held until every check
-// passes, the server's runtime error watched as Monitored, and the drain in
-// reverse layer order — is pinned in go-core's lifecycle tests and
-// go-web-sdk's health and server tests, not here. Unlike app_test.go, these
-// tests name nodes: they reach the graph through App.Graph and App.Nodes, as
-// does the Build-failure case, which substitutes a failing constructor.
+// owns: each Nodes field names its node, the root set App.Roots publishes
+// builds what a real Run builds, the server is alone in the top layer over
+// it, a reactor sits below the server by its group membership alone, and
+// the root set drops no order but the one an empty reactors group leaves.
+// What that position buys at run time — startup in layer order, readiness
+// held until every check passes, the server's runtime error watched as
+// Monitored, and the drain in reverse layer order — is pinned in go-core's
+// lifecycle tests and go-web-sdk's health and server tests, not here.
+// Unlike app_test.go, these tests reach the graph through App.Graph and
+// App.Nodes, and they read placement by handle: the System's layer of each
+// node handle, and the handle on each built node.
+//
+// Each placement guard is a function returning an error that carries the
+// System's layer table, called both by the test of the App's own roots and
+// by a test of a fixture that breaks it, so the fixture shows the real
+// assertion can fail.
 
 // Each node's name is its Nodes field's name lowercased, ignoring the
 // name's spaces, so a field names the node it holds without a comment
@@ -38,13 +47,17 @@ func TestGraph_NodesNamedByTheirFields(t *testing.T) {
 	graphtest.CheckNames(t, a.Nodes())
 }
 
-// buildAsRun builds a's graph from the set Run builds, App.Roots plus the
-// lifecycle config node, plus extra. TestGraph_RootsBuildAsRun holds this
-// set to Run's by observing a real Run.
+// runSet returns the set Run builds, App.Roots plus the lifecycle config
+// node, plus extra. TestGraph_RootsBuildAsRun holds this set to Run's by
+// observing a real Run.
+func runSet(a *app.App, extra ...graph.Ref) []graph.Ref {
+	return append(append(a.Roots(), a.Nodes().LifecycleConfig), extra...)
+}
+
+// buildAsRun builds a's graph from runSet(a, extra...).
 func buildAsRun(t *testing.T, a *app.App, extra ...graph.Ref) *graph.System {
 	t.Helper()
-	roots := append(a.Roots(), a.Nodes().LifecycleConfig)
-	sys, err := a.Graph().Build(append(roots, extra...)...)
+	sys, err := a.Graph().Build(runSet(a, extra...)...)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -66,10 +79,30 @@ func observeRun(t *testing.T, a *app.App) []graph.Ref {
 	return ran
 }
 
+// layerError returns an error of the formatted message followed by sys's
+// layer table.
+func layerError(sys *graph.System, format string, args ...any) error {
+	return fmt.Errorf(format+"\nlayers:\n%s", append(args, sys)...)
+}
+
+// wantGuardFails fails t unless err, a guard's verdict on sys, is an error
+// that names mention and carries sys's layer table.
+func wantGuardFails(t *testing.T, err error, sys *graph.System, mention string) {
+	t.Helper()
+	switch {
+	case err == nil:
+		t.Fatalf("the guard passed a fixture that breaks it\nlayers:\n%s", sys)
+	case !strings.Contains(err.Error(), mention):
+		t.Errorf("guard error = %q, want it to name %s", err, mention)
+	case !strings.Contains(err.Error(), "\nlayers:\n"+sys.String()):
+		t.Errorf("guard error = %q, want it to carry the layer table:\n%s", err, sys)
+	}
+}
+
 // A Build of App.Roots plus the lifecycle config node constructs exactly
 // the nodes a real Run constructs, compared by handle: every node Run
 // built is in the System, and the System holds no node Run did not build.
-// It holds the tests below, which inspect buildAsRun, to what Run reaches.
+// It holds the tests below, which inspect that set, to what Run reaches.
 func TestGraph_RootsBuildAsRun(t *testing.T) {
 	a := app.New(configtest.Config(t), io.Discard)
 	ran := observeRun(t, a)
@@ -77,38 +110,48 @@ func TestGraph_RootsBuildAsRun(t *testing.T) {
 	sys := buildAsRun(t, a)
 	for _, r := range ran {
 		if !sys.Has(r) {
-			t.Errorf("Run built %q, the root set's Build did not", r.Name())
+			t.Errorf("Run built %s, the root set's Build did not", r.Name())
 		}
 	}
-	if got, want := len(sys.Dependencies()), len(ran); got != want {
-		t.Errorf("the root set's Build holds %d nodes, Run built %d; System:\n%s", got, want, sys)
+	for _, d := range sys.Dependencies() {
+		if !slices.Contains(ran, d.Ref) {
+			t.Errorf("the root set's Build built %s, Run did not", d.Name)
+		}
+	}
+	if t.Failed() {
+		t.Logf("layers:\n%s", sys)
 	}
 }
 
-// serverAloneOnTop reports whether the System's last layer holds the server
-// node alone, and returns that layer.
-func serverAloneOnTop(sys *graph.System, n app.Nodes) ([]graph.Dependency, bool) {
-	layers := sys.Layers()
-	if len(layers) == 0 {
-		return nil, false
+// serverAlone reports, as an error carrying the layer table, any node of
+// sys at or above the server's layer: the server must be alone in the top
+// layer, so it starts after every other node and drains first.
+func serverAlone(sys *graph.System, server graph.Ref) error {
+	if !sys.Has(server) {
+		return layerError(sys, "%s is not in the System", server.Name())
 	}
-	top := layers[len(layers)-1]
-	alone := len(top) == 1 &&
-		top[0].Name == n.Server.Name() &&
-		top[0].Value == any(sys.Get(n.Server))
-	return top, alone
+	top := sys.LayerOf(server)
+	var beside []string
+	for _, d := range sys.Dependencies() {
+		if d.Ref != server && sys.LayerOf(d.Ref) >= top {
+			beside = append(beside, d.Name)
+		}
+	}
+	if len(beside) > 0 {
+		return layerError(sys, "%v at or above %s's layer %d; want %s alone in the top layer",
+			beside, server.Name(), top, server.Name())
+	}
+	return nil
 }
 
-// The server is the only node in the top layer of the graph Run builds, so
-// it starts after every other node and drains first. A node defined above
-// it, or beside it at the top, fails here; the second case shows the check
-// catches one.
+// The server is the only node in the top layer of the graph Run builds. A
+// node defined above it, or beside it at the top, fails the guard; the
+// second case shows the guard catches one.
 func TestGraph_ServerAloneInTopLayer(t *testing.T) {
 	t.Run("as defined", func(t *testing.T) {
 		a := app.New(configtest.Config(t), io.Discard)
-		sys := buildAsRun(t, a)
-		if top, ok := serverAloneOnTop(sys, a.Nodes()); !ok {
-			t.Errorf("top layer = %+v, want the server node alone", names(top))
+		if err := serverAlone(buildAsRun(t, a), a.Nodes().Server); err != nil {
+			t.Error(err)
 		}
 	})
 
@@ -119,64 +162,126 @@ func TestGraph_ServerAloneInTopLayer(t *testing.T) {
 			return s.Use(n.Server), nil
 		})
 		sys := buildAsRun(t, a, above)
-		if top, ok := serverAloneOnTop(sys, n); ok {
-			t.Errorf("top layer = %+v, reported the server alone with a node above it", names(top))
-		}
+		wantGuardFails(t, serverAlone(sys, n.Server), sys, "above")
 	})
 }
 
-// A reactor is reached by no Use, so Run builds it as a root, and the
-// server orders itself after each reactor, so the server stays alone in the
-// top layer above it. The template defines no reactor, so the fixture is
-// added black-box, joining the reactors group with graph.In. It orders
-// itself after the router, which puts it in the server's layer unless the
-// server orders itself after it; a fixture lower in the graph would sit below the server
-// regardless, and the test could not fail. Its interval is an hour, so it
-// never ticks while the test runs.
-func TestGraph_ServerAboveReactor(t *testing.T) {
-	a := app.New(configtest.Config(t), io.Discard)
-	n := a.Nodes()
-	fixture := a.Graph().Define("fixture", func(*graph.Scope) (*reactor.Reactor[time.Time], error) {
+// fixtureReactor defines on a's graph a reactor named name, ordered after
+// the router with opts besides. Ordered after the router, it sits in the
+// server's layer unless the server orders itself after it; a reactor lower
+// in the graph would sit below the server regardless, and the guard could
+// not fail. Its interval is an hour, so it never ticks while a test runs.
+func fixtureReactor(a *app.App, name string, opts ...graph.Option) *graph.Node[*reactor.Reactor[time.Time]] {
+	opts = append([]graph.Option{graph.After(a.Nodes().Router)}, opts...)
+	return a.Graph().Define(name, func(*graph.Scope) (*reactor.Reactor[time.Time], error) {
 		return reactor.New(reactor.Every(time.Hour), func(context.Context, time.Time) error {
 			return nil
 		}), nil
-	}, graph.After(n.Router), graph.In(n.Reactors))
-
-	// Run's own Build, observed, shows Run builds the reactor as a root:
-	// no node Uses it, so nothing else would reach it. The context ends
-	// before startup, so the Run starts nothing.
-	if !slices.Contains(observeRun(t, a), graph.Ref(fixture)) {
-		t.Fatalf("Run did not build the reactor %q", fixture.Name())
-	}
-
-	sys := buildAsRun(t, a)
-	if top, ok := serverAloneOnTop(sys, a.Nodes()); !ok {
-		t.Errorf("top layer = %+v, want the server node alone above the reactor", names(top))
-	}
-	if r, s := layerOf(sys, fixture.Name()), layerOf(sys, n.Server.Name()); r < 0 || r >= s {
-		t.Errorf("reactor in layer %d, server in layer %d; want the reactor below the server", r, s)
-	}
+	}, opts...)
 }
 
-// layerOf returns the index of the layer holding the node named name, or -1.
-func layerOf(sys *graph.System, name string) int {
-	for i, layer := range sys.Layers() {
-		for _, d := range layer {
-			if d.Name == name {
-				return i
-			}
+// A reactor joins the reactors group with graph.In on its Define line and
+// declares nothing else: Run builds it, since the group is one of the
+// roots, and it sits below the server, since the server orders itself
+// after the group. The template defines no reactor, so the fixture is
+// added black-box through the group. The second case shows the guard
+// catches the same reactor built without its In: nothing orders the server
+// after it, so it sits beside the server at the top.
+func TestGraph_ServerAboveReactor(t *testing.T) {
+	t.Run("in the reactors group", func(t *testing.T) {
+		a := app.New(configtest.Config(t), io.Discard)
+		fixture := fixtureReactor(a, "fixture", graph.In(a.Nodes().Reactors))
+
+		// Run's own Build, observed, shows Run builds the reactor: no node
+		// Uses it, so only the group's place in the roots reaches it.
+		if !slices.Contains(observeRun(t, a), graph.Ref(fixture)) {
+			t.Fatalf("Run did not build the reactor %s", fixture.Name())
 		}
-	}
-	return -1
+		if err := serverAlone(buildAsRun(t, a), a.Nodes().Server); err != nil {
+			t.Error(err)
+		}
+	})
+
+	t.Run("outside the reactors group", func(t *testing.T) {
+		a := app.New(configtest.Config(t), io.Discard)
+		stray := fixtureReactor(a, "stray")
+		sys := buildAsRun(t, a, stray)
+		wantGuardFails(t, serverAlone(sys, a.Nodes().Server), sys, "stray")
+	})
 }
 
-// names lists the layer's node names.
-func names(layer []graph.Dependency) []string {
-	out := make([]string, len(layer))
-	for i, d := range layer {
-		out[i] = d.Name
+// rootDrops builds roots from a's graph, a set holding App.Roots, and
+// reports, as an error carrying the layer table, a failed Build or any
+// After the Build dropped beyond the one allowed: while the reactors group
+// has no member, the server's After of the group orders nothing and is
+// dropped, so exactly that Drop is reported; with any member, nothing is.
+// Any other drop means a root is missing from the set, or a reactor its
+// In, so an order is silently lost. Whether the group has a member is read
+// from a Build of the group alone, which constructs nothing when it has
+// none.
+func rootDrops(a *app.App, roots []graph.Ref) error {
+	n := a.Nodes()
+	members, err := a.Graph().Build(n.Reactors)
+	if err != nil {
+		return fmt.Errorf("Build of %s: %w", n.Reactors.Name(), err)
 	}
-	return out
+	empty := len(members.Dependencies()) == 0
+
+	sys, err := a.Graph().Build(roots...)
+	if err != nil {
+		return fmt.Errorf("Build: %w", err)
+	}
+	allowed := graph.Drop{Node: n.Server, After: n.Reactors}
+	var drops []string
+	sawAllowed := false
+	for _, d := range sys.Dropped() {
+		if empty && d == allowed {
+			sawAllowed = true
+			continue
+		}
+		drops = append(drops, fmt.Sprintf("%s's After of %s", d.Node.Name(), d.After.Name()))
+	}
+	if len(drops) > 0 {
+		return layerError(sys, "dropped %s; want every After to order", strings.Join(drops, ", "))
+	}
+	if empty && !sawAllowed {
+		return layerError(sys, "%s's After of the empty %s group was not dropped; want exactly that Drop",
+			n.Server.Name(), n.Reactors.Name())
+	}
+	return nil
+}
+
+// A Build of the web root set drops no After but the server's of the
+// reactors group, and that one only while the group is empty. The third
+// case shows the guard catches an After whose target the roots do not
+// build.
+func TestGraph_RootsDropOnlyTheEmptyReactors(t *testing.T) {
+	t.Run("as defined", func(t *testing.T) {
+		a := app.New(configtest.Config(t), io.Discard)
+		if err := rootDrops(a, runSet(a)); err != nil {
+			t.Error(err)
+		}
+	})
+
+	t.Run("with a reactor", func(t *testing.T) {
+		a := app.New(configtest.Config(t), io.Discard)
+		fixtureReactor(a, "fixture", graph.In(a.Nodes().Reactors))
+		if err := rootDrops(a, runSet(a)); err != nil {
+			t.Error(err)
+		}
+	})
+
+	t.Run("an After of a node not built", func(t *testing.T) {
+		a := app.New(configtest.Config(t), io.Discard)
+		unbuilt := a.Graph().Value("unbuilt", 0)
+		orderer := a.Graph().Value("orderer", 0, graph.After(unbuilt))
+		roots := runSet(a, orderer)
+		sys, err := a.Graph().Build(roots...)
+		if err != nil {
+			t.Fatalf("Build: %v", err)
+		}
+		wantGuardFails(t, rootDrops(a, roots), sys, "orderer's After of unbuilt")
+	})
 }
 
 // A constructor's error fails Run's Build: Run returns 1 and writes the
