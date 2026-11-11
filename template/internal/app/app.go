@@ -77,10 +77,11 @@ func (a *App) Graph() *graph.Graph { return a.graph }
 func (a *App) Nodes() Nodes { return a.nodes }
 
 // Roots returns the service's root set, the nodes a Build of the whole
-// service starts from: the server, which reaches the router, the logger,
-// and the configuration through its Uses, and the reactors group, whose
-// members no Use reaches. [App.Run] builds this set plus the lifecycle
-// config node the Coordinator is configured from.
+// service starts from: the server, which reaches the router, the
+// readiness, the logger, the writer node, and the config node through its
+// Uses and theirs, and the reactors group, whose members no Use reaches.
+// [App.Run] builds this set plus the lifecycle config node the Coordinator
+// is configured from.
 func (a *App) Roots() []graph.Ref {
 	n := a.nodes
 	return []graph.Ref{n.Server, n.Reactors}

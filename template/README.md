@@ -60,6 +60,13 @@ SDKs ship for the purpose (go-core's `process/processtest`, go-web-sdk's `webtes
 `integration` build tag, the suite asserts the service's behavior through its API. It runs on
 merge to main and on demand, below the per-PR rate by design.
 
+`internal/app`'s graph tests check the composition itself. Each `Nodes` field names its node
+(go-core's `graphtest.CheckNames`). A Build of the root set, `App.Roots` plus the lifecycle
+configuration node, builds exactly what `Run` builds; in it the server is alone in the top layer,
+a reactor sits below the server by its membership of the reactors group alone, and no order
+between nodes is dropped but one: the server's order after the reactors group, while the group
+is empty. Each check is shown failing on a fixture that breaks it, with the layer table.
+
 The template's suite asserts the baseline: boot, both probes, and the drain. As the build points
 fill in, each capability adds its cases beside them, and the first backing service brings its
 compose stack: the task then boots that stack as an isolated compose project on its own port,
@@ -100,9 +107,13 @@ Each layer file defines its layer's nodes on go-core's dependency graph, in its 
 (`defineInfrastructure`, `defineAdmin`, `defineDomain`, `defineReactors`), and owns its mount;
 `server.go` defines the request edge (the readiness the probes report, the router, the server),
 and `routes.go` lists the mounts and does nothing else. The `Nodes` value holds one handle per
-node: each define function fills its part, and a constructor reads the lower layers' nodes from
-it with `Use`. `New` describes the graph and cannot fail; `Run` builds it and runs it under
-go-core's lifecycle Coordinator. `cmd/server` is the entrypoint alone and never changes.
+node, each named for its field, and declares each node's order and group membership on its
+`Define` line: each define function fills its part, and a constructor, a method on `*Nodes`,
+reads the lower layers' nodes from it with `Use`. `New` describes the graph and cannot fail.
+`App.Roots` is the root set, the server and the reactors group; `Run` hands it to go-web-sdk's
+`web.Service`, which builds it and runs the service under go-core's lifecycle Coordinator. A
+Build failure is written to stderr as `service failed: <error>`, naming the failing node.
+`cmd/server` is the entrypoint alone and never changes.
 
 A domain service starts from its Entity:
 
@@ -116,12 +127,15 @@ handed its policy from the config node at the construction site (`cfg.Reads.Limi
 collection read) and the service's logger for its error writer (`web.NewErrorWriter(logger, ...)`).
 
 An infrastructure service (a database pool, a storage client, an auth client) is a field on
-`Nodes` plus its node, defined in `defineInfrastructure` (`internal/app/infrastructure.go`) —
+`Nodes` plus its node, defined in `defineInfrastructure` (`internal/app/infrastructure.go`) and
+named for the field, with its constructor a method on `*Nodes` —
 
 ```go
-n.DB = g.Define("database", func(s *graph.Scope) (*db.Pool, error) {
+n.DB = g.Define("db", n.newDB)
+
+func (n *Nodes) newDB(s *graph.Scope) (*db.Pool, error) {
 	return db.New(s.Use(n.Config).DB, s.Use(n.Logger)), nil
-})
+}
 ```
 
 Its part in the lifecycle is inferred from its value's methods, with no registration: a
@@ -150,16 +164,17 @@ subscription, an interval, a wake on demand) rather than a caller. Each is a nod
 `reactor.New` builds one over a Source and a handler; the Source is `reactor.Every` for a plain
 interval, or `reactor.Wake` for an interval a nudge can also trigger. The `reactor.CancelWithin`
 option derives from the shutdown timeout how long the reactor's drain lets the handling in flight
-run before it cancels it. No node uses a reactor, so it is a Build root: append it to
-`Nodes.Reactors`, which `Run` builds and the server orders itself after. A reactor that expires
-sessions every minute is defined this way:
+run before it cancels it. No node uses a reactor, so it joins the `Nodes.Reactors` group with
+`graph.In` on its `Define` line: the group is one of `App.Roots`, and the server orders itself
+after it. A reactor that expires sessions every minute is defined this way:
 
 ```go
-n.Expiry = g.Define("expiry", func(s *graph.Scope) (*reactor.Reactor[time.Time], error) {
+n.Expiry = g.Define("expiry", n.newExpiry, graph.In(n.Reactors))
+
+func (n *Nodes) newExpiry(s *graph.Scope) (*reactor.Reactor[time.Time], error) {
 	return reactor.New(reactor.Every(time.Minute), s.Use(n.Sessions).Expire,
 		reactor.CancelWithin(s.Use(n.Config).ShutdownTimeout.Duration())), nil
-})
-n.Reactors = append(n.Reactors, n.Expiry)
+}
 ```
 
 Its lifecycle is inferred the same as an infrastructure service's: the Coordinator starts it,
