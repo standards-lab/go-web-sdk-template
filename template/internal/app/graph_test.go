@@ -30,9 +30,9 @@ import (
 // held until every check passes, the server's runtime error watched as
 // Monitored, and the drain in reverse layer order — is pinned in go-core's
 // lifecycle tests and go-web-sdk's health and server tests, not here.
-// Unlike app_test.go, these tests reach the graph through App.Graph and
-// App.Nodes, and they read placement by handle: the System's layer of each
-// node handle, and the handle on each built node.
+// These tests reach the graph through App.Graph and App.Nodes, and they
+// read placement by handle: the System's layer of each node handle, and
+// the handle on each built node.
 //
 // Each placement guard is a function returning an error that carries the
 // System's layer table, called both by the test of the App's own roots and
@@ -292,7 +292,7 @@ func TestRun_BuildFailureExitsOne(t *testing.T) {
 	var log, stderr syncBuffer
 	a := app.New(configtest.Config(t), &log)
 	a.Graph().Replace(a.Nodes().Logger, func(*graph.Scope) (*slog.Logger, error) {
-		return nil, errors.New("logger unavailable")
+		return nil, errors.New("unavailable")
 	})
 
 	// Cancelled up front, so a Build that wrongly succeeds drains at once
@@ -302,7 +302,7 @@ func TestRun_BuildFailureExitsOne(t *testing.T) {
 	if code := a.Run(ctx, &stderr); code != 1 {
 		t.Errorf("Run = %d, want 1", code)
 	}
-	failure := regexp.MustCompile(`^service failed: .*logger.*logger unavailable`)
+	failure := regexp.MustCompile(`^service failed: .*\blogger\b.*unavailable`)
 	if got := stderr.String(); !failure.MatchString(got) {
 		t.Errorf("stderr = %q, want a service failure naming the logger node and its error", got)
 	}
