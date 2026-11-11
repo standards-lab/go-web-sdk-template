@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/standards-lab/go-core/graph"
+	"github.com/standards-lab/go-core/graph/graphtest"
 	"github.com/standards-lab/go-core/reactor"
 	"github.com/standards-lab/go-web-sdk"
 
@@ -18,15 +19,24 @@ import (
 	"github.com/standards-lab/go-web-sdk-template/template/internal/config/configtest"
 )
 
-// This file pins the graph's one structural property the composition root
-// owns, the server alone in the top layer, over the root set App.Roots
-// publishes, which it first holds to what a real Run builds. What that position buys at
+// This file pins the graph's structural properties the composition root
+// owns: each Nodes field names its node, and the server is alone in the top
+// layer over the root set App.Roots publishes, which it first holds to what
+// a real Run builds. What that position buys at
 // run time — startup in layer order, readiness held until every check
 // passes, the server's runtime error watched as Monitored, and the drain in
 // reverse layer order — is pinned in go-core's lifecycle tests and
 // go-web-sdk's health and server tests, not here. Unlike app_test.go, these
 // tests name nodes: they reach the graph through App.Graph and App.Nodes, as
 // does the Build-failure case, which substitutes a failing constructor.
+
+// Each node's name is its Nodes field's name lowercased, ignoring the
+// name's spaces, so a field names the node it holds without a comment
+// repeating the name, and every field holds a handle once New returns.
+func TestGraph_NodesNamedByTheirFields(t *testing.T) {
+	a := app.New(configtest.Config(t), io.Discard)
+	graphtest.CheckNames(t, a.Nodes())
+}
 
 // buildAsRun builds a's graph from the set Run builds, App.Roots plus the
 // lifecycle config node, plus extra. TestGraph_RootsBuildAsRun holds this

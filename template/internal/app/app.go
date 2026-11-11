@@ -23,29 +23,42 @@ type App struct {
 // Nodes is the App's graph, one handle per node: the single description of
 // what the service is composed of. Each layer file's define function fills
 // its own part of one Nodes value, and its constructors read the lower
-// layers' nodes from that same value. Each node's name, in the field's
-// comment, is the name the lifecycle labels its errors with.
+// layers' nodes from that same value. Each field's node or group is named
+// for the field, its words lowercased and spaced, so LifecycleConfig holds
+// "lifecycle config", the name the lifecycle labels its errors with; the
+// field names the node, and no comment repeats it.
 type Nodes struct {
-	Config          *graph.Node[*config.Config]       // "config"
-	LifecycleConfig *graph.Node[lifecycle.Config]     // "lifecycle config"
-	Logger          *graph.Node[*slog.Logger]         // "logger"
-	Readiness       *graph.Node[*lifecycle.Readiness] // "readiness"
-	Router          *graph.Node[*web.Router]          // "router"
-	Server          *graph.Node[*web.Server]          // "server"
+	// The App's inputs (app.go): the configuration and the logger's
+	// writer New was given, each the same value in every Build.
+	Config *graph.Node[*config.Config]
+	Writer *graph.Node[io.Writer]
 
-	// Reactors is the reactor layer's group, "reactors", which each reactor
-	// joins with graph.In: a reactor is reached by no Use, so the group is
-	// one of [App.Roots], and the server orders itself after it so it stays
-	// the top layer.
+	// Infrastructure (infrastructure.go).
+	LifecycleConfig *graph.Node[lifecycle.Config]
+	Logger          *graph.Node[*slog.Logger]
+
+	// Reactors (reactors.go): the group each reactor joins with graph.In.
+	// A reactor is reached by no Use, so the group is one of [App.Roots],
+	// and the server orders itself after it so it stays the top layer.
 	Reactors *graph.Group
+
+	// The request edge (server.go).
+	Readiness *graph.Node[*lifecycle.Readiness]
+	Router    *graph.Node[*web.Router]
+	Server    *graph.Node[*web.Server]
 }
 
 // New describes the graph over cfg and a writer for the service's logger,
-// one layer file at a time, lowest first, and returns the App. It is cold:
-// it constructs nothing and cannot fail; [App.Run] builds.
+// and returns the App. It is cold: it constructs nothing and cannot fail;
+// [App.Run] builds. cfg and w are fixed-value nodes, the config node and
+// the writer node, which the layers reach with Use like any other; then
+// each layer file describes its nodes, lowest first, so every handle a
+// Define line orders after is already defined.
 func New(cfg *config.Config, w io.Writer) *App {
 	a := &App{graph: graph.New()}
-	defineInfrastructure(a.graph, &a.nodes, cfg, w)
+	a.nodes.Config = a.graph.Value("config", cfg)
+	a.nodes.Writer = a.graph.Value("writer", w)
+	defineInfrastructure(a.graph, &a.nodes)
 	defineAdmin(a.graph, &a.nodes)
 	defineDomain(a.graph, &a.nodes)
 	defineReactors(a.graph, &a.nodes)
