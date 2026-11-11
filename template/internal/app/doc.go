@@ -21,12 +21,8 @@
 // service is composed of: each define function fills its own part of one
 // Nodes value, declaring each node's order and group membership on its
 // Define line, and its constructors, methods on *Nodes, read the lower
-// layers' nodes from it with Use. Each field's node is named for the
-// field, so no comment names it; graph_test.go checks that rule with
-// go-core's graphtest.CheckNames, and checks the layers: the server alone
-// in the top layer, a reactor below it by its group membership alone, and
-// no order dropped but the server's after the reactors group while the
-// group is empty. [App] is the described process. [New] is the cold start: it
+// layers' nodes from it with Use; [Nodes] states how each field names its
+// node. [App] is the described process. [New] is the cold start: it
 // describes the graph, layer by layer, lowest first, constructs nothing,
 // and cannot fail. [App.Graph] and [App.Nodes] publish the graph and its
 // handles, so a caller can Observe or Replace a node before Run. [App.Run]
