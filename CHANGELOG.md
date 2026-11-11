@@ -7,6 +7,77 @@ generated service starts its own changelog; this one records the template's.
 
 ## [Unreleased]
 
+## [v0.14.0] - 2026-11-11
+
+The template moves onto go-core v0.11.0 and go-web-sdk v0.16.0: the service runs as one
+`web.Service` over the root set `App.Roots`, each node's order and group membership are declared
+on its Define line, each node is named for its `Nodes` field, and the graph tests read placement
+by handle. The module depends on `github.com/standards-lab/go-core v0.11.0` and
+`github.com/standards-lab/go-web-sdk v0.16.0`.
+
+A generated service that ports this release from v0.13.0 also takes the libraries' own changes
+since its previous pins; the [go-core](https://github.com/standards-lab/go-core/blob/main/CHANGELOG.md)
+and [go-web-sdk](https://github.com/standards-lab/go-web-sdk/blob/main/CHANGELOG.md) CHANGELOGs
+list them, and go-core's
+[Migrating from v0.10.0](https://github.com/standards-lab/go-core/blob/main/CHANGELOG.md#migrating-from-v0100)
+covers the graph a service defines. Porting meets these:
+
+- `App.Run(ctx)` becomes `App.Run(ctx, stderr)`, one `web.Service{Graph, LifecycleConfig,
+  Logger, Server, Roots}.Run(ctx, stderr)` call in place of the hand-written Build and lifecycle
+  Coordinator; the entrypoint passes its stderr. The "server ready", "server stopped", and
+  "service failed" records and the exit codes are unchanged.
+- A Build failure is written to stderr as `service failed: <error>`, naming the failing node,
+  and nothing is logged; the fallback logger, and the App's configuration and writer fields
+  kept only for it, are gone. A test that read the Build failure from the log reads stderr.
+- `App.Roots` returns the root set, the server and the reactors group. The config and logger
+  are no longer listed roots: the server reaches them by `Use`. `Run` builds the root set plus
+  the lifecycle config node.
+- `Nodes.Reactors` is a `*graph.Group`, `"reactors"`, defined in `defineReactors`. A reactor
+  joins it with `graph.In(n.Reactors)` on its Define line in place of being appended to
+  `Nodes.Reactors`, and the server declares `graph.After(n.Reactors)` on its Define line in
+  place of `s.After` in its constructor. While the group is empty, a Build reports that `After`
+  as its one Drop.
+- A `"lifecycle config"` node, `Nodes.LifecycleConfig`, yields the configuration's lifecycle
+  block that `web.Service` configures the Coordinator from.
+- Each node is named for its `Nodes` field, its words lowercased and spaced, and no comment
+  repeats the name; `TestGraph_NodesNamedByTheirFields` checks the rule with go-core's
+  `graphtest.CheckNames`. Nodes are renamed or redefined where needed: the configuration and
+  the logger's writer are `g.Value` nodes, `"config"` and `"writer"`, defined in `New`, so
+  `defineInfrastructure` takes only the graph and the `Nodes`; the readiness is
+  `g.Fresh[lifecycle.Readiness]`; and each constructor that reads a node is a `*Nodes` method
+  passed as a method value.
+- The `AppendReactor` test hook in `internal/app/export_test.go` is removed, and the
+  `.golangci.yml` `testpackage` note narrows to a clock or probe hook; the rule's skip of
+  `export_test.go` stays for generated services.
+
+### Added
+
+- `App.Roots` and `Nodes.LifecycleConfig`, with `Nodes.Writer` for the logger's writer.
+- `internal/app/graph_test.go`: `TestGraph_NodesNamedByTheirFields`;
+  `TestGraph_RootsBuildAsRun`, which compares a Build of the root set with a real `Run` by
+  handle; and `TestGraph_RootsDropOnlyTheEmptyReactors`, which allows only the server's `After`
+  of the empty reactors group as a Drop. Each placement guard prints the System's layer table
+  and is shown failing on a fixture.
+
+### Changed
+
+- **Breaking:** the go-core pin moves to v0.11.0 (from v0.10.0) and the go-web-sdk pin to
+  v0.16.0 (from v0.15.2), with the porting list above.
+- **Breaking** for a service that ports it: `App.Run` takes the process's stderr and runs
+  through `web.Service`, a Build failure goes to stderr, and the reactor layer is a group a
+  reactor joins with `graph.In`.
+- The graph tests read placement by handle through the System (`Has`, `LayerOf`,
+  `Dependencies`, `Dropped`) in place of scanning `Layers()` by name.
+  `TestGraph_ServerAboveReactor`'s fixture reactor joins the reactors group black-box with
+  `graph.In`, and `TestRun_TwicePanics` also observes that the second `Run` builds nothing.
+- `internal/app/doc.go`, `cmd/server/doc.go`, both READMEs, and the starter README's reactor
+  and infrastructure snippets describe `web.Service`, `App.Roots`, the Define-line
+  declarations, the `*Nodes` constructors, the field-name rule, and the graph tests.
+
+### Removed
+
+- The `AppendReactor` test hook in `internal/app/export_test.go`.
+
 ## [v0.13.0] - 2026-10-14
 
 The template moves onto go-core v0.10.0, whose readiness checks narrow to started values and
@@ -410,7 +481,8 @@ depends on `github.com/standards-lab/go-core v0.1.0` and
   copies the subtree as a running service; the starter README carries the after-generation
   identity steps.
 
-[Unreleased]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.13.0...HEAD
+[Unreleased]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.14.0...HEAD
+[v0.14.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.13.0...template/v0.14.0
 [v0.13.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.12.1...template/v0.13.0
 [v0.12.1]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.12.0...template/v0.12.1
 [v0.12.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.11.0...template/v0.12.0
