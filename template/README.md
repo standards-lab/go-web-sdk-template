@@ -107,9 +107,9 @@ Each layer file defines its layer's nodes on go-core's dependency graph, in its 
 (`defineInfrastructure`, `defineAdmin`, `defineDomain`, `defineReactors`), and owns its mount;
 `server.go` defines the request edge (the readiness the probes report, the router, the server),
 and `routes.go` lists the mounts and does nothing else. The `Nodes` value holds one handle per
-node, each named for its field, and declares each node's order and group membership on its
-`Define` line: each define function fills its part, and a constructor, a method on `*Nodes`,
-reads the lower layers' nodes from it with `Use`. `New` describes the graph and cannot fail.
+node, each named for its field. Each define function fills its part, declaring each node's order
+and group membership on its `Define` line, and a constructor, a method on `*Nodes`, reads the
+lower layers' nodes from it with `Use`. `New` describes the graph and cannot fail.
 `App.Roots` is the root set, the server and the reactors group; `Run` hands it to go-web-sdk's
 `web.Service`, which builds it and runs the service under go-core's lifecycle Coordinator. A
 Build failure is written to stderr as `service failed: <error>`, naming the failing node.

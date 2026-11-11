@@ -63,9 +63,6 @@ covers the graph a service defines. Porting meets these:
 
 - **Breaking:** the go-core pin moves to v0.11.0 (from v0.10.0) and the go-web-sdk pin to
   v0.16.0 (from v0.15.2), with the porting list above.
-- **Breaking** for a service that ports it: `App.Run` takes the process's stderr and runs
-  through `web.Service`, a Build failure goes to stderr, and the reactor layer is a group a
-  reactor joins with `graph.In`.
 - The graph tests read placement by handle through the System (`Has`, `LayerOf`,
   `Dependencies`, `Dropped`) in place of scanning `Layers()` by name.
   `TestGraph_ServerAboveReactor`'s fixture reactor joins the reactors group black-box with

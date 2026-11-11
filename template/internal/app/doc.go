@@ -3,8 +3,8 @@
 // defines the layer's nodes in its define function and owns its mount, so
 // the layer files are the architecture's layer list:
 //
-//   - infrastructure.go: defineInfrastructure, the configuration and the
-//     services the application is composed on (the logger, in the
+//   - infrastructure.go: defineInfrastructure, the lifecycle configuration
+//     and the services the application is composed on (the logger, in the
 //     template baseline);
 //   - admin.go: defineAdmin, the administrative services, and their /admin
 //     mount;
@@ -30,8 +30,8 @@
 // builds [App.Roots], the server and the reactors group, plus the lifecycle
 // config node, hands the System to go-core's lifecycle Coordinator, and
 // returns the process exit code. A constructor's error fails the Build,
-// written to the stderr Run is given as "service failed: " and the error,
-// which names the failing node; a wiring mistake panics during Build.
+// and Run writes "service failed: " and the error, which names the failing
+// node, to the stderr it is given; a wiring mistake panics during Build.
 //
 // What a node takes part in is inferred from its value's methods: a
 // lifecycle.Starter or Stopper is started or stopped, a Subsystem is both, a
@@ -52,7 +52,7 @@
 // caller drives a route, and an occurrence the process receives or
 // discovers drives a reactor. A route reads the domain nodes, and a
 // reactor may; neither is a domain service itself. Extending the service
-// means defining a node in its layer's define function, a reactor joining
-// the Nodes.Reactors group with graph.In on its Define line; the
-// signatures, cmd/server, and [App.Run] stay untouched.
+// means defining a node in its layer's define function, and joining a
+// reactor to the Nodes.Reactors group with graph.In on its Define line;
+// the signatures, cmd/server, and [App.Run] stay untouched.
 package app
