@@ -36,10 +36,11 @@ type Nodes struct {
 	Router    *graph.Node[*web.Router]          // "router"
 	Server    *graph.Node[*web.Server]          // "server"
 
-	// Reactors are the reactor layer's Build roots: a reactor is reached by
-	// no Use, so Run builds each as a root, and the server orders itself
-	// after each so it stays the top layer.
-	Reactors []graph.Ref
+	// Reactors is the reactor layer's group, "reactors", which each reactor
+	// joins with graph.In: a reactor is reached by no Use, so Run builds the
+	// group as a root, and the server orders itself after it so it stays
+	// the top layer.
+	Reactors *graph.Group
 }
 
 // New describes the graph over cfg and a writer for the service's logger,
@@ -68,7 +69,7 @@ func (a *App) Nodes() Nodes { return a.nodes }
 // Run builds the graph, hands the System to a lifecycle Coordinator with
 // the config node's lifecycle block, and runs it until ctx ends, returning
 // the process exit code. The Build's roots are every node Run reads (the
-// config, the logger, the server) and the reactors. Once the server has
+// config, the logger, the server) and the reactors group. Once the server has
 // bound, the ready record names its address. Run logs "server stopped" and
 // returns 0 after a clean drain, or logs "service failed" with the error
 // and returns 1 on a Build, startup, or shutdown failure. An App runs once:
@@ -80,8 +81,7 @@ func (a *App) Run(ctx context.Context) int {
 	a.ran = true
 
 	n := a.nodes
-	roots := append([]graph.Ref{n.Config, n.Logger, n.Server}, n.Reactors...)
-	sys, err := a.graph.Build(roots...)
+	sys, err := a.graph.Build(n.Config, n.Logger, n.Server, n.Reactors)
 	if err != nil {
 		// The logger node may be what failed, so the Build failure is
 		// reported through a logger of Run's own over the same writer and

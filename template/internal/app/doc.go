@@ -25,19 +25,19 @@
 // and cannot fail. [App.Graph] and [App.Nodes] publish the graph and its
 // handles, so a caller can Observe or Replace a node before Run. [App.Run]
 // is the hot start plus shutdown: it builds the graph from the config, the
-// logger, the server, and each reactor as roots, hands the System to go-core's
-// lifecycle Coordinator, and returns the process exit code. A constructor's
-// error is reported there as the service failing; a wiring mistake panics
-// during Build.
+// logger, the server, and the reactors group as roots, hands the System to
+// go-core's lifecycle Coordinator, and returns the process exit code. A
+// constructor's error is reported there as the service failing; a wiring
+// mistake panics during Build.
 //
 // What a node takes part in is inferred from its value's methods: a
 // lifecycle.Starter or Stopper is started or stopped, a Subsystem is both, a
 // ReadyStarter (a Starter that also implements Ready) joins the readiness
 // probe, and a Monitored has its runtime error watched. A value with Ready
 // but no Start joins no readiness check. Nodes start in layer order and
-// drain in reverse. The server orders itself after every reactor, so it is
-// alone in the top layer: it starts after every other node and drains first,
-// so in-flight requests complete before what they run on closes. The
+// drain in reverse. The server orders itself after the reactors group, so
+// it is alone in the top layer: it starts after every other node and drains
+// first, so in-flight requests complete before what they run on closes. The
 // service's logger reaches the server, the middleware, and every mount's
 // error writer. The probes register on the router's native mux, outside
 // every module's middleware, query live on every request through the
@@ -49,7 +49,7 @@
 // caller drives a route, and an occurrence the process receives or
 // discovers drives a reactor. A route reads the domain nodes, and a
 // reactor may; neither is a domain service itself. Extending the service
-// means defining a node in its layer's define function, and appending a
-// reactor's node to Nodes.Reactors; the signatures, cmd/server, and
-// [App.Run] stay untouched.
+// means defining a node in its layer's define function, a reactor joining
+// the Nodes.Reactors group with graph.In on its Define line; the
+// signatures, cmd/server, and [App.Run] stay untouched.
 package app

@@ -35,7 +35,7 @@ import (
 func buildAsRun(t *testing.T, a *app.App, extra ...graph.Ref) *graph.System {
 	t.Helper()
 	n := a.Nodes()
-	roots := append([]graph.Ref{n.Config, n.Logger, n.Server}, n.Reactors...)
+	roots := []graph.Ref{n.Config, n.Logger, n.Server, n.Reactors}
 	sys, err := a.Graph().Build(append(roots, extra...)...)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
@@ -68,7 +68,7 @@ func TestGraph_ServerAloneInTopLayer(t *testing.T) {
 		// Run's own Build, observed, so the Build below inspects the nodes
 		// Run reaches rather than a set this test chose.
 		ran := map[string]bool{}
-		a.Graph().Observe(func(name string) { ran[name] = true })
+		a.Graph().Observe(func(r graph.Ref) { ran[r.Name()] = true })
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
 		if code := a.Run(ctx); code != 0 {
@@ -105,27 +105,25 @@ func TestGraph_ServerAloneInTopLayer(t *testing.T) {
 // A reactor is reached by no Use, so Run builds it as a root, and the
 // server orders itself after each reactor, so the server stays alone in the
 // top layer above it. The template defines no reactor, so the fixture is
-// added through the test-only AppendReactor hook. It orders itself after the
-// router, which puts it in the server's layer unless the server orders
-// itself after it; a fixture lower in the graph would sit below the server
+// added black-box, joining the reactors group with graph.In. It orders
+// itself after the router, which puts it in the server's layer unless the
+// server orders itself after it; a fixture lower in the graph would sit below the server
 // regardless, and the test could not fail. Its interval is an hour, so it
 // never ticks while the test runs.
 func TestGraph_ServerAboveReactor(t *testing.T) {
 	a := app.New(configtest.Config(t), io.Discard)
 	n := a.Nodes()
-	fixture := a.Graph().Define("fixture", func(s *graph.Scope) (*reactor.Reactor[time.Time], error) {
-		s.After(n.Router)
+	fixture := a.Graph().Define("fixture", func(*graph.Scope) (*reactor.Reactor[time.Time], error) {
 		return reactor.New(reactor.Every(time.Hour), func(context.Context, time.Time) error {
 			return nil
 		}), nil
-	})
-	app.AppendReactor(a, fixture)
+	}, graph.After(n.Router), graph.In(n.Reactors))
 
 	// Run's own Build, observed, shows Run builds the reactor as a root:
 	// no node Uses it, so nothing else would reach it. The context ends
 	// before startup, so the Run starts nothing.
 	ran := map[string]bool{}
-	a.Graph().Observe(func(name string) { ran[name] = true })
+	a.Graph().Observe(func(r graph.Ref) { ran[r.Name()] = true })
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	if code := a.Run(ctx); code != 0 {
