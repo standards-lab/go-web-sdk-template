@@ -19,8 +19,11 @@ import (
 // it cancels it. The lifecycle Coordinator infers from the value's methods that
 // the reactor starts with its layer, drains before the nodes it uses, joins
 // the readiness probe under its node's name, and ends the run on its
-// failure, with no registration here. No node Uses a reactor, so each is
-// appended to n.Reactors, which Run builds as roots and the server orders
-// itself after. The template defines none; which reactors it runs, and what
-// drives them, is the application author's decision.
-func defineReactors(g *graph.Graph, n *Nodes) {}
+// failure, with no registration here. No node Uses a reactor, so each joins
+// the n.Reactors group with graph.In on its Define line; Run builds the
+// group as a root and the server orders itself after it. The template
+// defines none; which reactors it runs, and what drives them, is the
+// application author's decision.
+func defineReactors(g *graph.Graph, n *Nodes) {
+	n.Reactors = g.Group("reactors")
+}

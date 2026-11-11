@@ -3,8 +3,8 @@
 // defines the layer's nodes in its define function and owns its mount, so
 // the layer files are the architecture's layer list:
 //
-//   - infrastructure.go: defineInfrastructure, the configuration and the
-//     services the application is composed on (the logger, in the
+//   - infrastructure.go: defineInfrastructure, the lifecycle configuration
+//     and the services the application is composed on (the logger, in the
 //     template baseline);
 //   - admin.go: defineAdmin, the administrative services, and their /admin
 //     mount;
@@ -19,25 +19,28 @@
 //
 // [Nodes] holds one handle per node, the single description of what the
 // service is composed of: each define function fills its own part of one
-// Nodes value, and its constructors read the lower layers' nodes from it
-// with Use. [App] is the described process. [New] is the cold start: it
+// Nodes value, declaring each node's order and group membership on its
+// Define line, and its constructors, methods on *Nodes, read the lower
+// layers' nodes from it with Use; [Nodes] states how each field names its
+// node. [App] is the described process. [New] is the cold start: it
 // describes the graph, layer by layer, lowest first, constructs nothing,
 // and cannot fail. [App.Graph] and [App.Nodes] publish the graph and its
 // handles, so a caller can Observe or Replace a node before Run. [App.Run]
-// is the hot start plus shutdown: it builds the graph from the config, the
-// logger, the server, and each reactor as roots, hands the System to go-core's
-// lifecycle Coordinator, and returns the process exit code. A constructor's
-// error is reported there as the service failing; a wiring mistake panics
-// during Build.
+// is the hot start plus shutdown: it runs a go-web-sdk web.Service, which
+// builds [App.Roots], the server and the reactors group, plus the lifecycle
+// config node, hands the System to go-core's lifecycle Coordinator, and
+// returns the process exit code. A constructor's error fails the Build,
+// and Run writes "service failed: " and the error, which names the failing
+// node, to the stderr it is given; a wiring mistake panics during Build.
 //
 // What a node takes part in is inferred from its value's methods: a
 // lifecycle.Starter or Stopper is started or stopped, a Subsystem is both, a
 // ReadyStarter (a Starter that also implements Ready) joins the readiness
 // probe, and a Monitored has its runtime error watched. A value with Ready
 // but no Start joins no readiness check. Nodes start in layer order and
-// drain in reverse. The server orders itself after every reactor, so it is
-// alone in the top layer: it starts after every other node and drains first,
-// so in-flight requests complete before what they run on closes. The
+// drain in reverse. The server orders itself after the reactors group, so
+// it is alone in the top layer: it starts after every other node and drains
+// first, so in-flight requests complete before what they run on closes. The
 // service's logger reaches the server, the middleware, and every mount's
 // error writer. The probes register on the router's native mux, outside
 // every module's middleware, query live on every request through the
@@ -49,7 +52,7 @@
 // caller drives a route, and an occurrence the process receives or
 // discovers drives a reactor. A route reads the domain nodes, and a
 // reactor may; neither is a domain service itself. Extending the service
-// means defining a node in its layer's define function, and appending a
-// reactor's node to Nodes.Reactors; the signatures, cmd/server, and
-// [App.Run] stay untouched.
+// means defining a node in its layer's define function, and joining a
+// reactor to the Nodes.Reactors group with graph.In on its Define line;
+// the signatures, cmd/server, and [App.Run] stay untouched.
 package app
