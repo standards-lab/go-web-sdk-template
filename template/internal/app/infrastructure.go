@@ -5,13 +5,14 @@ import (
 	"log/slog"
 
 	"github.com/standards-lab/go-core/graph"
+	"github.com/standards-lab/go-core/lifecycle"
 	"github.com/standards-lab/go-core/logging"
 
 	"github.com/standards-lab/go-web-sdk-template/template/internal/config"
 )
 
 // defineInfrastructure defines the infrastructure nodes on g into n: the
-// configuration cfg, and the services the application is composed on,
+// configuration cfg and its lifecycle block, and the services the application is composed on,
 // built from it — the logger, written to w, in the template baseline; a
 // database pool, storage, or auth client as a service grows, each its own
 // node. It constructs nothing. A service whose value implements
@@ -22,7 +23,16 @@ func defineInfrastructure(g *graph.Graph, n *Nodes, cfg *config.Config, w io.Wri
 	n.Config = g.Define("config", func(*graph.Scope) (*config.Config, error) {
 		return cfg, nil
 	})
+	n.LifecycleConfig = g.Define("lifecycle config", newLifecycleConfig(n))
 	n.Logger = g.Define("logger", newLogger(n, w))
+}
+
+// newLifecycleConfig yields the config node's lifecycle block, the
+// configuration [App.Run] hands the lifecycle Coordinator.
+func newLifecycleConfig(n *Nodes) func(*graph.Scope) (lifecycle.Config, error) {
+	return func(s *graph.Scope) (lifecycle.Config, error) {
+		return s.Use(n.Config).Config, nil
+	}
 }
 
 // newLogger constructs the service's logger over w from the config node's

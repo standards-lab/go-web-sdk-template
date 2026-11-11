@@ -16,6 +16,7 @@ import (
 	"time"
 
 	libconfig "github.com/standards-lab/go-core/config"
+	"github.com/standards-lab/go-core/graph"
 	"github.com/standards-lab/go-web-sdk"
 	mw "github.com/standards-lab/go-web-sdk/middleware"
 
@@ -71,10 +72,12 @@ func waitForReady(t *testing.T, buf *syncBuffer) string {
 	return ""
 }
 
-// running is one App under Run: its log, the cancel that drains it, and the
-// channel Run's exit code arrives on.
+// running is one App under Run: its log, the stderr Run reports a Build
+// failure on, the cancel that drains it, and the channel Run's exit code
+// arrives on.
 type running struct {
 	log    *syncBuffer
+	stderr *syncBuffer
 	cancel context.CancelFunc
 	done   chan int
 }
@@ -86,8 +89,8 @@ func start(t *testing.T, cfg *config.Config) *running {
 	buf := &syncBuffer{}
 	a := app.New(cfg, buf)
 	ctx, cancel := context.WithCancel(context.Background())
-	r := &running{log: buf, cancel: cancel, done: make(chan int, 1)}
-	go func() { r.done <- a.Run(ctx) }()
+	r := &running{log: buf, stderr: &syncBuffer{}, cancel: cancel, done: make(chan int, 1)}
+	go func() { r.done <- a.Run(ctx, r.stderr) }()
 	t.Cleanup(cancel)
 	return r
 }
@@ -99,7 +102,7 @@ func (r *running) exit(t *testing.T) int {
 	case code := <-r.done:
 		return code
 	case <-time.After(failsafe):
-		t.Fatalf("timed out waiting for Run to return; log: %q", r.log.String())
+		t.Fatalf("timed out waiting for Run to return; log: %q, stderr: %q", r.log.String(), r.stderr.String())
 		return -1
 	}
 }
@@ -312,21 +315,27 @@ func TestRun_ShutdownBoundedByTimeout(t *testing.T) {
 }
 
 // An App runs once. Run reports a Build or lifecycle failure as an exit
-// code, but a second Run is a programming error and panics.
+// code, but a second Run is a programming error and panics, before it
+// builds anything: an observer added after the first Run sees no node
+// constructed.
 func TestRun_TwicePanics(t *testing.T) {
-	buf := &syncBuffer{}
-	a := app.New(configtest.Config(t), buf)
+	a := app.New(configtest.Config(t), io.Discard)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	if code := a.Run(ctx); code != 0 {
+	if code := a.Run(ctx, io.Discard); code != 0 {
 		t.Fatalf("first Run = %d, want 0", code)
 	}
 
+	built := 0
+	a.Graph().Observe(func(graph.Ref) { built++ })
 	defer func() {
 		if recover() == nil {
 			t.Error("a second Run did not panic")
 		}
+		if built != 0 {
+			t.Errorf("the second Run built %d nodes before panicking, want none", built)
+		}
 	}()
-	_ = a.Run(ctx)
+	_ = a.Run(ctx, io.Discard)
 }

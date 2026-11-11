@@ -24,11 +24,12 @@
 // describes the graph, layer by layer, lowest first, constructs nothing,
 // and cannot fail. [App.Graph] and [App.Nodes] publish the graph and its
 // handles, so a caller can Observe or Replace a node before Run. [App.Run]
-// is the hot start plus shutdown: it builds the graph from the config, the
-// logger, the server, and the reactors group as roots, hands the System to
-// go-core's lifecycle Coordinator, and returns the process exit code. A
-// constructor's error is reported there as the service failing; a wiring
-// mistake panics during Build.
+// is the hot start plus shutdown: it runs a go-web-sdk web.Service, which
+// builds [App.Roots], the server and the reactors group, plus the lifecycle
+// config node, hands the System to go-core's lifecycle Coordinator, and
+// returns the process exit code. A constructor's error fails the Build,
+// reported on stderr as the service failing; a wiring mistake panics
+// during Build.
 //
 // What a node takes part in is inferred from its value's methods: a
 // lifecycle.Starter or Stopper is started or stopped, a Subsystem is both, a
