@@ -161,19 +161,22 @@ surface on the public port is exposed the moment it serves a route.
 A reactor is an entry point that runs for the process lifetime, driven by an occurrence (a
 subscription, an interval, a wake on demand) rather than a caller. Each is a node defined in
 `defineReactors` (`internal/app/reactors.go`), whose value is a go-core `reactor.Reactor`.
-`reactor.New` builds one over a Source and a handler; the Source is `reactor.Every` for a plain
-interval, or `reactor.Wake` for an interval a nudge can also trigger. The `reactor.CancelWithin`
-option derives from the shutdown timeout how long the reactor's drain lets the handling in flight
-run before it cancels it. No node uses a reactor, so it joins the `Nodes.Reactors` group with
-`graph.In` on its `Define` line: the group is one of `App.Roots`, and the server orders itself
-after it. A reactor that expires sessions every minute is defined this way:
+`reactor.New` builds one over a Source, a handler, and a `reactor.Options`; the Source is
+`reactor.Every` for a plain interval, or `reactor.Wake` for an interval a nudge can also trigger.
+`reactor.Options.CancelAfter` sets how long the reactor's drain lets the handling in flight run
+before it cancels it, and `reactor.CancelWithin` returns half the shutdown timeout for that
+field. Under the zero `reactor.Options{}`, the drain cancels the handling only when its context
+ends. No node uses a reactor, so it joins the `Nodes.Reactors` group with `graph.In` on its
+`Define` line: the group is one of `App.Roots`, and the server orders itself after it. A reactor
+that expires sessions every minute is defined this way:
 
 ```go
 n.Expiry = g.Define("expiry", n.newExpiry, graph.In(n.Reactors))
 
 func (n *Nodes) newExpiry(s *graph.Scope) (*reactor.Reactor[time.Time], error) {
-	return reactor.New(reactor.Every(time.Minute), s.Use(n.Sessions).Expire,
-		reactor.CancelWithin(s.Use(n.Config).ShutdownTimeout.Duration())), nil
+	return reactor.New(reactor.Every(time.Minute), s.Use(n.Sessions).Expire, reactor.Options{
+		CancelAfter: reactor.CancelWithin(s.Use(n.Config).ShutdownTimeout.Duration()),
+	}), nil
 }
 ```
 

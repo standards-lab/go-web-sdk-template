@@ -7,6 +7,48 @@ generated service starts its own changelog; this one records the template's.
 
 ## [Unreleased]
 
+## [v0.15.0] - 2026-11-12
+
+The template moves onto go-core v0.12.0 and go-web-sdk v0.17.0, whose constructors take their
+configuration as one trailing options value in place of variadic options: the middleware stack
+passes `RequestID` its options, and the reactor docs pass `reactor.New` its `reactor.Options`.
+The module depends on `github.com/standards-lab/go-core v0.12.0` and
+`github.com/standards-lab/go-web-sdk v0.17.0`.
+
+A generated service that ports this release from v0.14.0 also takes the libraries' own changes
+since its previous pins; the [go-core](https://github.com/standards-lab/go-core/blob/main/CHANGELOG.md)
+and [go-web-sdk](https://github.com/standards-lab/go-web-sdk/blob/main/CHANGELOG.md) CHANGELOGs
+list them, with go-core's
+[Migrating from v0.11.0](https://github.com/standards-lab/go-core/blob/main/CHANGELOG.md#migrating-from-v0110)
+and go-web-sdk's
+[Migrating from v0.16.0](https://github.com/standards-lab/go-web-sdk/blob/main/CHANGELOG.md#migrating-from-v0160).
+Porting meets these:
+
+- `mw.RequestID()` becomes `mw.RequestID(mw.RequestIDOptions{})`; a service that set an ID
+  source or a trusted header sets `RequestIDOptions.Source` or `RequestIDOptions.TrustedHeader`
+  in place of `WithIDSource` or `WithTrustedHeader`. The zero value keeps the defaults.
+- `reactor.New` takes a trailing `reactor.Options`: `reactor.New(src, fn, reactor.Options{})`
+  for the defaults. `reactor.CancelWithin` is no longer an option but the duration that sets
+  `Options.CancelAfter`, half the drain timeout it is given:
+  `reactor.Options{CancelAfter: reactor.CancelWithin(drain)}`.
+- `event.NewRecorder` takes a trailing `event.Options`, with `Clock` and `IDs` as its fields in
+  place of the `event.Clock` and `event.IDs` options; leave a field nil for its default.
+- `web.WriteProblem(w, r, status, title, detail)` is replaced by `Problem.WriteFor`: the
+  arguments become `web.Problem` fields, as in
+  `web.Problem{Status: status, Title: title, Detail: detail}.WriteFor(w, r)`; an empty title
+  still defaults to the status text.
+
+### Changed
+
+- **Breaking:** the go-core pin moves to v0.12.0 (from v0.11.0) and the go-web-sdk pin to
+  v0.17.0 (from v0.16.0), with the porting list above.
+- `middleware` passes `RequestID` the zero `mw.RequestIDOptions{}`, and the graph tests'
+  fixture reactor passes the zero `reactor.Options{}`; neither changes behavior.
+- `defineReactors`' doc comment and the starter README describe `reactor.New` over a Source, a
+  handler, and a `reactor.Options`, with `reactor.CancelWithin` as the duration that sets
+  `Options.CancelAfter`; the README's expiry snippet passes
+  `reactor.Options{CancelAfter: reactor.CancelWithin(...)}`.
+
 ## [v0.14.0] - 2026-11-11
 
 The template moves onto go-core v0.11.0 and go-web-sdk v0.16.0: the service runs as one
@@ -478,7 +520,8 @@ depends on `github.com/standards-lab/go-core v0.1.0` and
   copies the subtree as a running service; the starter README carries the after-generation
   identity steps.
 
-[Unreleased]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.14.0...HEAD
+[Unreleased]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.15.0...HEAD
+[v0.15.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.14.0...template/v0.15.0
 [v0.14.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.13.0...template/v0.14.0
 [v0.13.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.12.1...template/v0.13.0
 [v0.12.1]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.12.0...template/v0.12.1
