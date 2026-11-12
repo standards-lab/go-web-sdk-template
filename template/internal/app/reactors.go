@@ -14,11 +14,11 @@ import (
 // a reactor joins. The node's value is a go-core reactor.Reactor, which
 // reactor.New returns over a Source, a handler, and a reactor.Options. The
 // Source is reactor.Every for a plain interval, or reactor.Wake for an
-// interval that a nudge can also trigger. The Options' CancelAfter is how
-// long a drain lets the handling in flight run before it cancels it, and
-// reactor.CancelWithin derives that duration from the shutdown timeout, half
-// of it; under the zero Options the handling is cancelled only when the
-// drain's context ends. The lifecycle Coordinator infers from the value's
+// interval that a nudge can also trigger. reactor.Options.CancelAfter sets
+// how long a drain lets the handling in flight run before it cancels it, and
+// reactor.CancelWithin returns half the shutdown timeout for that field.
+// Under the zero Options, the drain cancels the handling only when its
+// context ends. The lifecycle Coordinator infers from the value's
 // methods that the reactor starts with its layer, drains before the nodes it
 // uses, joins the readiness probe under its node's name, and ends the run on
 // its failure, with no registration here. No node Uses a reactor, so each
