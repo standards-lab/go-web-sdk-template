@@ -166,9 +166,9 @@ subscription, an interval, a wake on demand) rather than a caller. Each is a nod
 The Options' `CancelAfter` is how long the reactor's drain lets the handling in flight run before
 it cancels it, and `reactor.CancelWithin` derives that duration from the shutdown timeout, half
 of it; under the zero `reactor.Options{}` the handling is cancelled only when the drain's context
-ends. No node uses a reactor, so it joins the `Nodes.Reactors` group with
-`graph.In` on its `Define` line: the group is one of `App.Roots`, and the server orders itself
-after it. A reactor that expires sessions every minute is defined this way:
+ends. No node uses a reactor, so it joins the `Nodes.Reactors` group with `graph.In` on its
+`Define` line: the group is one of `App.Roots`, and the server orders itself after it. A reactor
+that expires sessions every minute is defined this way:
 
 ```go
 n.Expiry = g.Define("expiry", n.newExpiry, graph.In(n.Reactors))

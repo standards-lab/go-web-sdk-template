@@ -16,15 +16,17 @@ The module depends on `github.com/standards-lab/go-core v0.12.0` and
 `github.com/standards-lab/go-web-sdk v0.17.0`.
 
 A generated service that ports this release from v0.14.0 also takes the libraries' own changes
-since its previous pins; go-core's
+since its previous pins; the [go-core](https://github.com/standards-lab/go-core/blob/main/CHANGELOG.md)
+and [go-web-sdk](https://github.com/standards-lab/go-web-sdk/blob/main/CHANGELOG.md) CHANGELOGs
+list them, with go-core's
 [Migrating from v0.11.0](https://github.com/standards-lab/go-core/blob/main/CHANGELOG.md#migrating-from-v0110)
 and go-web-sdk's
-[Migrating from v0.16.0](https://github.com/standards-lab/go-web-sdk/blob/main/CHANGELOG.md#migrating-from-v0160)
-cover them. Porting meets these:
+[Migrating from v0.16.0](https://github.com/standards-lab/go-web-sdk/blob/main/CHANGELOG.md#migrating-from-v0160).
+Porting meets these:
 
 - `mw.RequestID()` becomes `mw.RequestID(mw.RequestIDOptions{})`; a service that set an ID
-  source or a trusted header names it as a `RequestIDOptions` field in place of
-  `WithIDSource` or `WithTrustedHeader`. The zero value keeps the defaults.
+  source or a trusted header sets `RequestIDOptions.Source` or `RequestIDOptions.TrustedHeader`
+  in place of `WithIDSource` or `WithTrustedHeader`. The zero value keeps the defaults.
 - `reactor.New` takes a trailing `reactor.Options`: `reactor.New(src, fn, reactor.Options{})`
   for the defaults. `reactor.CancelWithin` is no longer an option but the duration that sets
   `Options.CancelAfter`, half the drain timeout it is given:
@@ -38,8 +40,8 @@ cover them. Porting meets these:
 
 ### Changed
 
-- **Breaking:** the pins move: go-core v0.11.0 → v0.12.0 and go-web-sdk v0.16.0 → v0.17.0,
-  with the porting list above.
+- **Breaking:** the go-core pin moves to v0.12.0 (from v0.11.0) and the go-web-sdk pin to
+  v0.17.0 (from v0.16.0), with the porting list above.
 - `middleware` passes `RequestID` the zero `mw.RequestIDOptions{}`, and the graph tests'
   fixture reactor passes the zero `reactor.Options{}`; neither changes behavior.
 - `defineReactors`' doc comment and the starter README describe `reactor.New` over a Source, a
