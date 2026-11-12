@@ -22,7 +22,7 @@ import (
 func middleware(s *graph.Scope, n *Nodes) []web.Middleware {
 	logger := s.Use(n.Logger)
 	return []web.Middleware{
-		mw.RequestID(),
+		mw.RequestID(mw.RequestIDOptions{}),
 		mw.RequestLogger(logger),
 		mw.Recoverer(logger),
 	}

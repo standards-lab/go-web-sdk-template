@@ -176,7 +176,7 @@ func fixtureReactor(a *app.App, name string, opts ...graph.Option) *graph.Node[*
 	return a.Graph().Define(name, func(*graph.Scope) (*reactor.Reactor[time.Time], error) {
 		return reactor.New(reactor.Every(time.Hour), func(context.Context, time.Time) error {
 			return nil
-		}), nil
+		}, reactor.Options{}), nil
 	}, opts...)
 }
 
