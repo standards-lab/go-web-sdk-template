@@ -25,6 +25,8 @@ go install golang.org/x/tools/cmd/gonew@latest
 
 # generate a new web service
 gonew github.com/standards-lab/go-web-sdk-template/template@latest example.com/newsvc
+cd newsvc
+git init
 ```
 
 [`gonew`](https://pkg.go.dev/golang.org/x/tools/cmd/gonew) copies the module and rewrites its
@@ -63,6 +65,9 @@ README documents it, `CHANGELOG.md` sources the `template/v*` release notes, and
 workflow runs the checks inside `template/`. The template's `.gitignore` and CI workflow are
 separate copies of the root ones; a change to either copy is applied to the other in the same
 commit.
+A file added under `template/` keeps to generation's three constraints: it sits inside the
+subtree, survives the `gonew` path rewrite, and leaves the starter README's identity steps
+complete.
 
 ## Development
 
@@ -72,8 +77,9 @@ mise trust && mise install
 mise run check
 ```
 
-`template/mise.toml` carries the tasks: `check` (the one read-only check CI runs),
-`currency` (what trails its latest), `upgrade`, and the plain-command wrappers;
+`template/mise.toml` pins marathon's tools and carries the tasks: `check` (the one read-only
+check CI runs, ending with lint-context and lint-references in `template/` and at the repository
+root), `currency` (what trails its latest), `upgrade`, and the plain-command wrappers;
 `template/README.md` lists them.
 
 ## License
