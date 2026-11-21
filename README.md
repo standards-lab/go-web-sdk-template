@@ -25,8 +25,9 @@ go install golang.org/x/tools/cmd/gonew@latest
 
 # generate a new web service
 gonew github.com/standards-lab/go-web-sdk-template/template@latest example.com/newsvc
-cd newsvc
-git init
+
+# the check's lint-references reads the repository's files through git
+cd newsvc && git init
 ```
 
 [`gonew`](https://pkg.go.dev/golang.org/x/tools/cmd/gonew) copies the module and rewrites its

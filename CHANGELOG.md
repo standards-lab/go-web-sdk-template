@@ -24,6 +24,8 @@ five kinds. The module depends on `github.com/standards-lab/go-web-sdk v0.18.0`.
 - Comments are held to the five kinds: in-body comments, unexported-identifier docs and
   test-function docs are removed, and their reasoning moves to the package docs (the
   `internal/app` doc covers its layers and graph), the READMEs, and `docs/`.
+- The starter README gains the testing reasoning that sat in comments: tests are black-box under
+  `testpackage`, and a release is cut only from a main whose integration run has passed.
 - The starter README's "Building out the service" walkthrough moves to `docs/building-out.md`,
   content unchanged; the README links to it.
 - The generation steps change into the new directory and run `git init`, which the check's

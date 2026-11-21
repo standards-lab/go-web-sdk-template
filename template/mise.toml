@@ -50,7 +50,7 @@ description = "Report every requirement, Go version, tool, and action pin behind
 run = "bash scripts/currency.sh"
 
 [tasks.upgrade]
-description = "Upgrade every module's go directive to the current Go minor with no toolchain line, and its direct requirements and the local mise tools to their latest, rewriting go.mod and mise.toml"
+description = "Upgrade every module's go directive to the current Go minor with no toolchain line, its direct requirements, and the local mise tools to their latest, rewriting go.mod and mise.toml"
 run = '''
 set -eu
 export GOWORK=off
@@ -83,7 +83,7 @@ description = "Run the unit tier"
 run = "go test -race ./..."
 
 [tasks.integration]
-description = "Run the integration tier against the built service"
+description = "Run the integration tier against the built service, as a subprocess"
 run = "go test -race -count=1 -tags integration ./integration/"
 
 [tasks.fmt]

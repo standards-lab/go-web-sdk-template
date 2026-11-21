@@ -38,7 +38,7 @@ Each task wraps a plain command, so the repository works without mise:
 
 | Task | Command | What it does |
 |------|---------|--------------|
-| `mise run check` | build, vet, `gofmt -l`, `go fix -diff`, `go mod tidy -diff`, `go test -race`, `golangci-lint run`, `lint-context`, `lint-references` | The one read-only check, as CI runs it |
+| `mise run check` | build, vet, `gofmt -l`, `go fix -diff`, `go mod tidy -diff`, `go test -race`, `golangci-lint run`, `lint-context`, `lint-references` | The one read-only check, as CI runs it; the lints run at the project root and, when the project is nested in a git repository, at its top level |
 | `mise run currency` | `bash scripts/currency.sh` | Report requirements, Go version, tools, and action pins behind their latest |
 | `mise run upgrade` | `go mod edit -go=<current minor> -toolchain=none`, `go get <direct>@latest`, `go mod tidy`, `mise upgrade --bump --local` | Upgrade the go directive, requirements, and tools, rewriting `go.mod` and `mise.toml` |
 | `mise run build` | `go build ./...` | Build the module |
@@ -58,7 +58,12 @@ untagged harness that builds `cmd/server` once, runs it as a subprocess configur
 variables on a port it reserved, and drives it through its HTTP surface, over the toolkit the
 SDKs ship for the purpose (go-core's `process/processtest`, go-web-sdk's `webtest`). Under the
 `integration` build tag, the suite asserts the service's behavior through its API. It runs on
-merge to main and on demand, below the per-PR rate by design.
+merge to main and on demand, below the per-PR rate by design; a release is cut only from a main
+whose run has passed.
+
+Tests are black-box: golangci-lint's `testpackage` keeps every test in its package's `_test`
+package, driving the exported API. `export_test.go` is the one white-box file allowed, and only
+to export a clock or probe hook the API cannot reach deterministically.
 
 `internal/app`'s graph tests check the composition itself. Each `Nodes` field names its node
 (go-core's `graphtest.CheckNames`). A Build of the root set, `App.Roots` plus the lifecycle
