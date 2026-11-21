@@ -7,9 +7,6 @@ import (
 	"testing"
 )
 
-// A configuration the loader rejects stops the process at the entrypoint:
-// run exits nonzero and reports the failure on stderr, before any app is
-// built.
 func TestRun_ConfigLoadFailureExitsNonzero(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "config.json"), []byte(`{"Config": {}}`), 0o600); err != nil {

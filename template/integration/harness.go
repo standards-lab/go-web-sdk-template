@@ -59,9 +59,6 @@ func (s *Service) Ready(t testing.TB) *Service {
 	return s
 }
 
-// environment composes the service's own variables for the run. APP_ENV is
-// cleared so no overlay applies: the base file and these variables are the
-// whole configuration. The port is the one Launch reserved.
 func environment(opts Options, addr string) []string {
 	host, port, _ := net.SplitHostPort(addr)
 	env := []string{

@@ -1,3 +1,6 @@
+# CI: the check on every push and pull request, and the integration tier on push to main and on
+# demand.
+# See architecture/standards/go-elemental/principles/release-and-ci.md
 name: CI
 
 on:
@@ -20,11 +23,6 @@ jobs:
       - name: mise run check
         run: mise -C template run check
 
-  # The integration tier: the composed service as the binary, black-box,
-  # through its API. On merge to main and on demand, below the per-PR unit
-  # rate by design; a release is cut only from a main whose run has passed.
-  # A service with a backing service runs this against its compose stack as
-  # an isolated project, the way the reference service does.
   integration:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest

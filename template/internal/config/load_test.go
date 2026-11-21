@@ -10,13 +10,6 @@ import (
 	"github.com/standards-lab/go-web-sdk-template/template/internal/config"
 )
 
-// These tests drive Load over real files in a scratch working directory,
-// pinning the file contract — the keys config.json accepts and how an
-// overlay layers on it — independent of how Config is declared.
-
-// inDir writes files into a fresh working directory, enters it, and clears
-// the variables that would select an overlay or override the timeout, so
-// the files alone configure the load.
 func inDir(t *testing.T, files map[string]string) {
 	t.Helper()
 	dir := t.TempDir()
@@ -30,7 +23,6 @@ func inDir(t *testing.T, files map[string]string) {
 	t.Setenv("APP_SHUTDOWN_TIMEOUT", "")
 }
 
-// shutdown_timeout is a top-level key of config.json.
 func TestLoad_ShutdownTimeoutIsTopLevelKey(t *testing.T) {
 	inDir(t, map[string]string{"config.json": `{"shutdown_timeout": "3s"}`})
 
@@ -68,8 +60,6 @@ func TestLoad_EnvOverridesFileShutdownTimeout(t *testing.T) {
 	}
 }
 
-// An overlay's shutdown_timeout replaces the base file's; an overlay that
-// leaves it unset keeps the base's.
 func TestLoad_OverlayShutdownTimeout(t *testing.T) {
 	cases := map[string]struct {
 		overlay string
@@ -97,8 +87,6 @@ func TestLoad_OverlayShutdownTimeout(t *testing.T) {
 	}
 }
 
-// The file decodes strictly: a key naming a Go identifier rather than a
-// declared JSON key is an unknown field, not a way into the struct.
 func TestLoad_RejectsUnknownTopLevelKeys(t *testing.T) {
 	for _, key := range []string{"Config", "Env"} {
 		t.Run(key, func(t *testing.T) {
