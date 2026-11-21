@@ -7,6 +7,11 @@ generated service starts its own changelog; this one records the template's.
 
 ## [Unreleased]
 
+### Changed
+
+- The go-web-sdk pin moves to v0.18.0 (from v0.17.0), which adds `web.NewClient`; nothing in
+  the template changes.
+
 ## [v0.15.0] - 2026-11-12
 
 The template moves onto go-core v0.12.0 and go-web-sdk v0.17.0, whose constructors take their
