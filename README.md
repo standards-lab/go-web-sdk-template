@@ -44,8 +44,7 @@ receives. It documents running, configuring, and building out the service.
 `go-web-sdk-template` is the web service template of
 [Go Elemental](https://github.com/standards-lab/architecture/blob/main/standards/go-elemental/README.md), the
 minimal-dependency Go standard. This README and each package's `doc.go` document the
-repository; the standard's principles it enhances are stated below.
-Its repository-level principles:
+repository. The repository-level principles below enhance the standard's:
 
 - The template module depends on `go-core` and `go-web-sdk` at pinned releases, and nothing
   else. The template is engine-free: no data engine is declared and no provider is imported; a
@@ -61,11 +60,11 @@ Its repository-level principles:
 ## Repository layout
 
 `template/` is the module a generated service copies, and development happens inside it. The
-root above it maintains the template: `context/` records its design and session state, this
-README documents it, `CHANGELOG.md` sources the `template/v*` release notes, and the CI
-workflow runs the checks inside `template/`. The template's `.gitignore` and CI workflow are
-separate copies of the root ones; a change to either copy is applied to the other in the same
-commit.
+root above it maintains the template: `context/` holds the capability map and the notes for
+planned work, this README documents it, `CHANGELOG.md` sources the `template/v*` release notes,
+and the CI workflow runs the checks inside `template/`. The template's `.gitignore` and CI
+workflow are separate copies of the root ones; a change to either copy is applied to the other in
+the same commit.
 
 A file added under `template/` keeps to generation's three constraints: it sits inside the
 subtree, survives the `gonew` path rewrite, and leaves the starter README's identity steps

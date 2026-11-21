@@ -26,23 +26,19 @@ type App struct {
 // layers' nodes from that same value. Each field's node or group is named
 // for the field, its words lowercased and spaced, so LifecycleConfig holds
 // "lifecycle config", the name the lifecycle labels its errors with; the
-// field names the node, and no comment repeats it.
+// field names the node, and no comment repeats it. Reactors is the group
+// each reactor joins with graph.In; a reactor is reached by no Use, so the
+// group is one of [App.Roots], and the server orders itself after it so it
+// stays the top layer.
 type Nodes struct {
-	// The App's inputs (app.go): the configuration and the logger's
-	// writer New was given, each the same value in every Build.
 	Config *graph.Node[*config.Config]
 	Writer *graph.Node[io.Writer]
 
-	// Infrastructure (infrastructure.go).
 	LifecycleConfig *graph.Node[lifecycle.Config]
 	Logger          *graph.Node[*slog.Logger]
 
-	// Reactors (reactors.go): the group each reactor joins with graph.In.
-	// A reactor is reached by no Use, so the group is one of [App.Roots],
-	// and the server orders itself after it so it stays the top layer.
 	Reactors *graph.Group
 
-	// The request edge (server.go).
 	Readiness *graph.Node[*lifecycle.Readiness]
 	Router    *graph.Node[*web.Router]
 	Server    *graph.Node[*web.Server]

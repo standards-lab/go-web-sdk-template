@@ -1,6 +1,7 @@
 # Building out the service
 
-The layer files it builds on are listed in the [starter README](../README.md#building-out-the-service).
+This page covers how the layer files the [starter README](../README.md#building-out-the-service)
+lists define and mount their nodes.
 
 Each layer file defines its layer's nodes on go-core's dependency graph, in its define function
 (`defineInfrastructure`, `defineAdmin`, `defineDomain`, `defineReactors`), and owns its mount;
