@@ -1,17 +1,19 @@
+# See architecture/standards/go-elemental/principles/release-and-ci.md
+[settings]
+task.run_auto_install = false
+
 [tools]
+"github:standards-lab/claude-plugins" = { version = "0.22.0", version_prefix = "marathon/v" }
 go = "1.27.4"
 golangci-lint = "2.15.0"
 jq = "1.8.2"
 
 [env]
 APP_ENV = "local"
-# The service's Go modules, as directories; tasks run in each one.
 GO_MODULES = "."
 
-# check vets, fixes, and lints with the integration tag so the integration
-# suite compiles and lints too; it runs only the unit tier.
 [tasks.check]
-description = "Build, vet, format, fix, tidy, test, and lint every module; writes nothing"
+description = "Build, vet, format, fix, tidy, test the unit tier, and lint every module, vetting, fixing, and linting the integration suite too, then run lint-context and lint-references at the project root and, when the project is nested, at the git top level; writes nothing"
 run = '''
 set -eu
 export GOWORK=off
@@ -27,19 +29,31 @@ for mod in $GO_MODULES; do
   go test -race ./...
   golangci-lint run --build-tags integration ./...
 done
+cd "$MISE_PROJECT_ROOT"
+root=$(pwd -P)
+top=$(git rev-parse --show-toplevel 2>/dev/null || echo "$root")
+fail=0
+for lint in lint-context lint-references; do
+  if ! command -v "$lint" >/dev/null; then
+    echo "FAIL: $lint is not on PATH; run mise install" >&2
+    fail=1
+    continue
+  fi
+  "$lint" || fail=1
+  [ "$top" = "$root" ] || (cd "$top" && "$lint") || fail=1
+done
+exit "$fail"
 '''
 
-# currency runs through bash: gonew does not keep the script's executable bit.
 [tasks.currency]
-description = "Report every requirement, Go version, tool, and action pin behind its latest; writes nothing"
+description = "Report every requirement, Go version, tool, and action pin behind its latest, running the script through bash since gonew drops its executable bit; writes nothing"
 run = "bash scripts/currency.sh"
 
 [tasks.upgrade]
-description = "Upgrade every module's go directive and direct requirements and the local mise tools to their latest, rewriting go.mod and mise.toml"
+description = "Upgrade every module's go directive to the current Go minor with no toolchain line, its direct requirements, and the local mise tools to their latest, rewriting go.mod and mise.toml"
 run = '''
 set -eu
 export GOWORK=off
-# The go directive follows the current Go minor, with no toolchain line.
 go_minor=$(mise latest go | cut -d. -f1,2)
 for mod in $GO_MODULES; do
   cd "$MISE_PROJECT_ROOT/$mod"
@@ -68,11 +82,8 @@ run = "go run ./cmd/server"
 description = "Run the unit tier"
 run = "go test -race ./..."
 
-# The integration tier runs the built service as a subprocess. A service with a
-# backing service wraps this in its compose stack as an isolated project, the way
-# the reference service does; the template is engine-free and needs none.
 [tasks.integration]
-description = "Run the integration tier against the built service"
+description = "Run the integration tier against the built service, as a subprocess"
 run = "go test -race -count=1 -tags integration ./integration/"
 
 [tasks.fmt]

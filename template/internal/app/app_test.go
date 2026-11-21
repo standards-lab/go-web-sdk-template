@@ -25,17 +25,8 @@ import (
 	"github.com/standards-lab/go-web-sdk-template/template/internal/config/configtest"
 )
 
-// These tests drive the composition root from outside: New builds it, Run
-// serves it, the log's ready record is the ready signal, and HTTP is the
-// only probe. They name no node and no layer, so they hold the process's
-// behavior across a change to how New describes it.
-
-// failsafe bounds every wait for an event that should occur, so a broken
-// composition fails the test instead of hanging it.
 const failsafe = 2 * time.Second
 
-// syncBuffer serializes writes so the app's logging goroutines and the
-// test's reads stay race-free.
 type syncBuffer struct {
 	mu  sync.Mutex
 	buf bytes.Buffer
@@ -53,12 +44,8 @@ func (b *syncBuffer) String() string {
 	return b.buf.String()
 }
 
-// readyRecord matches the ready record's message and its addr attribute in
-// the text log format.
 var readyRecord = regexp.MustCompile(`msg="server ready" addr=(\S+)`)
 
-// waitForReady polls the log for the ready record and returns the address
-// it names.
 func waitForReady(t *testing.T, buf *syncBuffer) string {
 	t.Helper()
 	deadline := time.Now().Add(failsafe)
@@ -72,9 +59,6 @@ func waitForReady(t *testing.T, buf *syncBuffer) string {
 	return ""
 }
 
-// running is one App under Run: its log, the stderr Run reports a Build
-// failure on, the cancel that drains it, and the channel Run's exit code
-// arrives on.
 type running struct {
 	log    *syncBuffer
 	stderr *syncBuffer
@@ -82,8 +66,6 @@ type running struct {
 	done   chan int
 }
 
-// start builds an App from cfg and runs it in the background. The cleanup
-// cancels it, so a test that fails early leaves no server behind.
 func start(t *testing.T, cfg *config.Config) *running {
 	t.Helper()
 	buf := &syncBuffer{}
@@ -95,7 +77,6 @@ func start(t *testing.T, cfg *config.Config) *running {
 	return r
 }
 
-// exit waits for Run to return and gives its exit code.
 func (r *running) exit(t *testing.T) int {
 	t.Helper()
 	select {
@@ -107,12 +88,8 @@ func (r *running) exit(t *testing.T) int {
 	}
 }
 
-// client disables keep-alives so no idle connection outlives its request and
-// delays the server's drain.
 var client = &http.Client{Transport: &http.Transport{DisableKeepAlives: true}}
 
-// get returns the status code, response header, and body of a GET against
-// the running app.
 func get(t *testing.T, addr, path string) (int, http.Header, string) {
 	t.Helper()
 	resp, err := client.Get(fmt.Sprintf("http://%s%s", addr, path))
@@ -127,7 +104,6 @@ func get(t *testing.T, addr, path string) (int, http.Header, string) {
 	return resp.StatusCode, resp.Header, string(body)
 }
 
-// assertProbeHeaders pins the headers both probes answer with.
 func assertProbeHeaders(t *testing.T, path string, header http.Header) {
 	t.Helper()
 	if got := header.Get("Content-Type"); got != "application/json" {
@@ -141,10 +117,6 @@ func assertProbeHeaders(t *testing.T, path string, header http.Header) {
 	}
 }
 
-// The baseline composition end to end. New assembles the process from the
-// package's build points. Run serves the probes, the request logger from
-// the middleware stack records the traffic, and a cancel drains to exit 0
-// with the stop record.
 func TestRun_ServesProbesThenDrains(t *testing.T) {
 	r := start(t, configtest.Config(t))
 	addr := waitForReady(t, r.log)
@@ -170,8 +142,6 @@ func TestRun_ServesProbesThenDrains(t *testing.T) {
 	}
 }
 
-// The liveness probe's whole contract: 200, a JSON body of exactly
-// {"status":"ok"}, never cached, and stamped with a request ID.
 func TestRun_HealthzContract(t *testing.T) {
 	r := start(t, configtest.Config(t))
 	addr := waitForReady(t, r.log)
@@ -186,9 +156,6 @@ func TestRun_HealthzContract(t *testing.T) {
 	}
 }
 
-// The readiness probe's whole contract: 200, status "ready", and exactly
-// one check, the lifecycle coordinator's, reporting ready. A second check
-// appearing, or the one being renamed, fails here.
 func TestRun_ReadyzContract(t *testing.T) {
 	r := start(t, configtest.Config(t))
 	addr := waitForReady(t, r.log)
@@ -221,9 +188,6 @@ func TestRun_ReadyzContract(t *testing.T) {
 	}
 }
 
-// The ready record fires once the server has bound, once, and names the
-// address it bound: the configured host with the kernel's port in place of
-// the requested 0. That address answers the readiness probe.
 func TestRun_ReadyRecordNamesBoundAddr(t *testing.T) {
 	r := start(t, configtest.Config(t))
 	addr := waitForReady(t, r.log)
@@ -246,9 +210,6 @@ func TestRun_ReadyRecordNamesBoundAddr(t *testing.T) {
 	}
 }
 
-// A port another listener holds fails startup: Run returns 1, the failure
-// is logged as a startup error naming the server, and the server never
-// reports ready.
 func TestRun_TakenPortFailsStartup(t *testing.T) {
 	held, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -274,9 +235,6 @@ func TestRun_TakenPortFailsStartup(t *testing.T) {
 	}
 }
 
-// The shutdown timeout bounds the drain. A connection that has sent part
-// of a request is active, so a graceful drain would wait on it; past the
-// timeout Run gives up, returns 1, and does so promptly.
 func TestRun_ShutdownBoundedByTimeout(t *testing.T) {
 	const timeout = 200 * time.Millisecond
 	const margin = 500 * time.Millisecond
@@ -292,14 +250,12 @@ func TestRun_ShutdownBoundedByTimeout(t *testing.T) {
 		t.Fatalf("dial %s: %v", addr, err)
 	}
 	defer func() { _ = conn.Close() }()
-	// An unterminated header block: the server reads it and waits for the
-	// rest, holding the connection active.
-	if _, err := io.WriteString(conn, "GET "+web.HealthPath+" HTTP/1.1\r\nHost: stall\r\n"); err != nil {
+	unterminatedHeaders := "GET " + web.HealthPath + " HTTP/1.1\r\nHost: stall\r\n"
+	if _, err := io.WriteString(conn, unterminatedHeaders); err != nil {
 		t.Fatalf("write partial request: %v", err)
 	}
-	// Give the server a moment to read the bytes and mark the connection
-	// active before the drain starts.
-	time.Sleep(50 * time.Millisecond)
+	const settleBeforeDrain = 50 * time.Millisecond
+	time.Sleep(settleBeforeDrain)
 
 	began := time.Now()
 	r.cancel()
@@ -314,10 +270,6 @@ func TestRun_ShutdownBoundedByTimeout(t *testing.T) {
 	}
 }
 
-// An App runs once. Run reports a Build or lifecycle failure as an exit
-// code, but a second Run is a programming error and panics, before it
-// builds anything: an observer added after the first Run sees no node
-// constructed.
 func TestRun_TwicePanics(t *testing.T) {
 	a := app.New(configtest.Config(t), io.Discard)
 

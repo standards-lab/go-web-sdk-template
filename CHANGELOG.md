@@ -7,6 +7,31 @@ generated service starts its own changelog; this one records the template's.
 
 ## [Unreleased]
 
+## [v0.16.0] - 2026-11-21
+
+A generated service inherits the organization's development harness: its check runs marathon's
+context lints, its suppressions name their linter and reason, and its comments are held to the
+five kinds. The module depends on `github.com/standards-lab/go-web-sdk v0.18.0`.
+
+### Changed
+
+- The go-web-sdk pin moves to v0.18.0 (from v0.17.0), which adds `web.NewClient`; nothing in
+  the template changes.
+- CI's workflow runs `jdx/mise-action` v5.2.10.
+- golangci-lint enables `nolintlint`: a `//nolint` directive names the linter it suppresses and
+  gives a reason.
+- `mise.toml` pins marathon 0.22.0, and `mise run check` ends with `lint-context` and
+  `lint-references` in the project and, when it is nested in a git repository, at its top level.
+- Comments are held to the five kinds: in-body comments, unexported-identifier docs and
+  test-function docs are removed, and their reasoning moves to the package docs (the
+  `internal/app` doc covers its layers and graph), the READMEs, and `docs/`.
+- The starter README gains the testing reasoning that sat in comments: tests are black-box under
+  `testpackage`, and a release is cut only from a main whose integration run has passed.
+- The starter README's "Building out the service" walkthrough moves to `docs/building-out.md`,
+  content unchanged; the README links to it.
+- The generation steps change into the new directory and run `git init`, which the check's
+  `lint-references` needs to read the repository's files.
+
 ## [v0.15.0] - 2026-11-12
 
 The template moves onto go-core v0.12.0 and go-web-sdk v0.17.0, whose constructors take their
@@ -520,7 +545,8 @@ depends on `github.com/standards-lab/go-core v0.1.0` and
   copies the subtree as a running service; the starter README carries the after-generation
   identity steps.
 
-[Unreleased]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.15.0...HEAD
+[Unreleased]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.16.0...HEAD
+[v0.16.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.15.0...template/v0.16.0
 [v0.15.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.14.0...template/v0.15.0
 [v0.14.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.13.0...template/v0.14.0
 [v0.13.0]: https://github.com/standards-lab/go-web-sdk-template/compare/template/v0.12.1...template/v0.13.0

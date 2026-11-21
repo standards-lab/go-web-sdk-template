@@ -29,7 +29,6 @@ func TestConfig_MergeOverlaysSetFields(t *testing.T) {
 	if base.Server.Host != "127.0.0.1" {
 		t.Errorf("Server.Host = %s, want 127.0.0.1", base.Server.Host)
 	}
-	// A field the overlay leaves unset keeps the base value.
 	if got := base.ShutdownTimeout.Duration(); got != 10*time.Second {
 		t.Errorf("ShutdownTimeout = %s, want 10s", got)
 	}
@@ -41,7 +40,6 @@ func TestConfig_FinalizeDefaults(t *testing.T) {
 		t.Fatalf("Finalize: %v", err)
 	}
 
-	// Pins the documented default shutdown timeout.
 	if got := cfg.ShutdownTimeout.Duration(); got != 10*time.Second {
 		t.Errorf("ShutdownTimeout = %s, want 10s", got)
 	}
@@ -53,10 +51,6 @@ func TestConfig_FinalizeDefaults(t *testing.T) {
 	}
 }
 
-// Every environment-variable name derives from the prefix Finalize receives —
-// in production, the one envPrefix const Load passes, the single place a
-// seeded service renames — so a renamed prefix reads its own variables and
-// ignores the default namespace.
 func TestConfig_FinalizeReadsEnvUnderPrefix(t *testing.T) {
 	t.Setenv("SVC_LOG_LEVEL", "debug")
 	t.Setenv("SVC_SERVER_PORT", "9090")
@@ -114,7 +108,6 @@ func TestConfig_FinalizeRejectsNonPositiveShutdownTimeout(t *testing.T) {
 	}
 }
 
-// A file's non-positive timeout fails the same check as the environment's.
 func TestConfig_FinalizeRejectsNonPositiveFileShutdownTimeout(t *testing.T) {
 	cfg := &config.Config{ShutdownTimeout: libconfig.Duration(-time.Second)}
 	err := cfg.Finalize("")
@@ -136,8 +129,6 @@ func TestConfig_FinalizeRejectsUnparsableShutdownTimeout(t *testing.T) {
 	}
 }
 
-// The empty prefix composes no variable name, so no environment value —
-// under the default namespace or none — overrides the timeout.
 func TestConfig_FinalizeEmptyPrefixReadsNoShutdownOverride(t *testing.T) {
 	t.Setenv("APP_SHUTDOWN_TIMEOUT", "30s")
 	t.Setenv("SHUTDOWN_TIMEOUT", "30s")
@@ -179,7 +170,6 @@ func TestReads_FinalizeDefaults(t *testing.T) {
 		t.Fatalf("Finalize: %v", err)
 	}
 
-	// Pins the documented paging defaults.
 	if got := cfg.Reads.Limits(); got != (web.Limits{DefaultSize: 20, MaxSize: 100}) {
 		t.Errorf("Reads.Limits() = %+v, want {20 100}", got)
 	}
@@ -201,7 +191,6 @@ func TestReads_MergeOverlaysSetFields(t *testing.T) {
 	if got := *base.Reads.MaxSize; got != 200 {
 		t.Errorf("Reads.MaxSize = %d, want 200", got)
 	}
-	// A field the overlay leaves unset keeps the base value.
 	if got := *base.Reads.DefaultSize; got != 10 {
 		t.Errorf("Reads.DefaultSize = %d, want 10", got)
 	}

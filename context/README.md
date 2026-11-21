@@ -11,29 +11,9 @@ This context records only working knowledge the code and the READMEs do not expr
 
 ## Capability map
 
-Every capability below is built except the candidate directions, and the code and each
-package's `doc.go` are authoritative for it.
-
-- **Runnable baseline**: the template ships the composition root `internal/app` (one file per
-  layer, each defining its nodes on go-core's dependency graph, named for their `Nodes` fields,
-  which go-web-sdk's `web.Service` runs from the root set `App.Roots`), the `internal/config`
-  root with its `reads` policy block, the `cmd/server` entrypoint, the probes, the drain in
-  reverse layer order, the graph tests on names and layers, and the suite.
-  `internal/app/doc.go` and the template's README state the layout. The admin, domain, and
-  reactor layers ship empty, because what they compose is the application author's decision,
-  and the `/admin` group serves on the API listener until the application settles its isolation.
-- **Generation**: three constraints keep the module cleanly copyable with `gonew`: the subtree
-  boundary, every file surviving the path rewrite, and the starter README's identity steps. Each
-  added file is re-checked against them.
-- **Integration tier**: the `integration` package runs over the SDKs' toolkit, through the
-  `integration` task and the CI job on merge to main. The tier is engine-free. Planned: with its
-  first backing service, the template adopts the reference service's isolated compose project.
-- **CI and release**: CI runs `mise run check` inside `template/` on every pull
-  request and the integration tier on merge to main; releases are `template/v*` tags cut from
-  the root `CHANGELOG.md`.
-- **Candidate direction**: the admin layer's content and the database infrastructure patterns
-  (the data package, the admin route group, the conventions lint, the compose stack and its
-  tasks) are reference-architecture patterns go-web-service proves. The template stays
-  engine-free and standardizes only what the reference service has proven stable.
-- **Candidate direction**: the scaffolding CLI (`scaffolding-cli.md`), which waits on the
-  reference service.
+- **Runnable baseline** (built): [internal/app/doc.go](../template/internal/app/doc.go).
+- **Generation** (built): [README.md](../README.md).
+- **Integration tier** (built): [integration/doc.go](../template/integration/doc.go).
+- **CI and release** (built): [ci.yml](../.github/workflows/ci.yml).
+- **Admin layer and database patterns** (planned): [admin-and-database-patterns.md](admin-and-database-patterns.md).
+- **Scaffolding CLI** (planned): [scaffolding-cli.md](scaffolding-cli.md).
