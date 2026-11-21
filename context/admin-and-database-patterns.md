@@ -1,9 +1,9 @@
 # Admin layer and database patterns
 
-Planned: the admin layer's content and the database infrastructure patterns (the data package,
-the admin route group, the conventions lint, the compose stack and its tasks) are
-reference-architecture patterns go-web-service proves. The template stays engine-free and
-standardizes only what the reference service has proven stable.
+Planned: the template standardizes the admin layer's content and the database infrastructure
+patterns (the data package, the admin route group, the conventions lint, the compose stack and its
+tasks) once go-web-service, the reference service, has proven them stable. The template stays
+engine-free throughout.
 
 Open points:
 

@@ -72,12 +72,9 @@ go-web-sdk-template `template/v0.16.0`, then go-cli-sdk-template `template/v0.3.
 
 ## Progress
 
-slices 0/7 committed · standards — · spec — · editor —
+slices 7/7 committed · standards ✓ · spec ✓ · editor ✓
 
 ## Decisions
-
-- adopt: the templates' marathon pin and lints live in `template/mise.toml`, so generated projects
-  inherit them; the check lints the project root and, when nested, the repository top level. (T1)
 
 ## Pending edits
 

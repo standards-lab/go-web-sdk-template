@@ -17,6 +17,7 @@ five kinds. The module depends on `github.com/standards-lab/go-web-sdk v0.18.0`.
 
 - The go-web-sdk pin moves to v0.18.0 (from v0.17.0), which adds `web.NewClient`; nothing in
   the template changes.
+- CI's workflow runs `jdx/mise-action` v5.2.10.
 - golangci-lint enables `nolintlint`: a `//nolint` directive names the linter it suppresses and
   gives a reason.
 - `mise.toml` pins marathon 0.22.0, and `mise run check` ends with `lint-context` and

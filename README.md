@@ -66,6 +66,7 @@ README documents it, `CHANGELOG.md` sources the `template/v*` release notes, and
 workflow runs the checks inside `template/`. The template's `.gitignore` and CI workflow are
 separate copies of the root ones; a change to either copy is applied to the other in the same
 commit.
+
 A file added under `template/` keeps to generation's three constraints: it sits inside the
 subtree, survives the `gonew` path rewrite, and leaves the starter README's identity steps
 complete.
