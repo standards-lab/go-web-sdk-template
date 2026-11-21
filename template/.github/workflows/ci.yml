@@ -1,5 +1,5 @@
-# CI: the check on every push and pull request, and the integration tier on push to main and on
-# demand.
+# CI: the check on every pull request and push to main, and the integration tier on push to main
+# and on demand.
 # See architecture/standards/go-elemental/principles/release-and-ci.md
 name: CI
 

@@ -50,6 +50,10 @@ Each task wraps a plain command, so the repository works without mise:
 | `mise run tidy` | `go mod tidy` | Reconcile module requirements |
 | `mise run lint` | `golangci-lint run --build-tags integration ./...` | Lint, the integration suite included |
 
+`lint-context` and `lint-references` are marathon's context and reference lints, which `mise.toml`
+pins from `standards-lab/claude-plugins`; `lint-references` reads the repository's files through
+git, so run `git init` first.
+
 ## Testing
 
 Two tiers. The unit tier is hermetic and runs on every pull request: `go test -race ./...`,
